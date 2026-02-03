@@ -37,7 +37,7 @@
 - **Next.js 16** (App Router) + TypeScript
   - Turbopack 기본 탑재 (빠른 빌드)
   - Async params/id 패턴 (모든 params는 await 필요)
-- **Tailwind CSS** + **shadcn/ui**
+- **Tailwind CSS** (순수 Tailwind, UI 라이브러리 없음)
 - **Framer Motion** (애니메이션 효과)
 - **dnd-kit** (드래그 앤 드롭 편집기)
 - **Zustand** (상태 관리)
