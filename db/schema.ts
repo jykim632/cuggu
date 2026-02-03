@@ -89,7 +89,9 @@ export const users = pgTable('users', {
     .primaryKey()
     .$defaultFn(() => createId()),
   email: varchar('email', { length: 255 }).notNull().unique(),
+  emailVerified: timestamp('email_verified'), // NextAuth required
   name: varchar('name', { length: 255 }),
+  image: varchar('image', { length: 500 }), // NextAuth required (profile image)
   role: userRoleEnum('role').default('USER').notNull(),
   premiumPlan: premiumPlanEnum('premium_plan').default('FREE').notNull(),
   aiCredits: integer('ai_credits').default(2).notNull(),
@@ -293,12 +295,8 @@ export const accounts = pgTable(
 export const sessions = pgTable(
   'sessions',
   {
-    id: varchar('id', { length: 128 })
-      .primaryKey()
-      .$defaultFn(() => createId()),
     sessionToken: varchar('session_token', { length: 255 })
-      .notNull()
-      .unique(),
+      .primaryKey(),
     userId: varchar('user_id', { length: 128 })
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
