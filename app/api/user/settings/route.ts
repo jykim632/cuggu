@@ -28,7 +28,7 @@ export async function PATCH(request: Request) {
         {
           success: false,
           error: "Invalid request",
-          details: validation.error.errors,
+          details: validation.error.issues,
         },
         { status: 400 }
       );
