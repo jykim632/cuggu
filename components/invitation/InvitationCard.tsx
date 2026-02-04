@@ -20,6 +20,7 @@ interface InvitationCardProps {
   status: "DRAFT" | "PUBLISHED" | "EXPIRED" | "DELETED";
   thumbnailUrl?: string;
   createdAt: string;
+  onDelete?: (id: string) => void;
 }
 
 const statusConfig = {
@@ -39,6 +40,7 @@ export function InvitationCard({
   status,
   thumbnailUrl,
   createdAt,
+  onDelete,
 }: InvitationCardProps) {
   const router = useRouter();
   const [showMenu, setShowMenu] = useState(false);
@@ -97,8 +99,8 @@ export function InvitationCard({
         throw new Error("삭제 실패");
       }
 
-      // 페이지 새로고침
-      window.location.reload();
+      // 부모 컴포넌트에 삭제 알림
+      onDelete?.(id);
     } catch (error) {
       console.error("삭제 실패:", error);
       alert("삭제에 실패했습니다. 다시 시도해주세요.");

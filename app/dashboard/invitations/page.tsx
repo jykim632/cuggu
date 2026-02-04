@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Loader2 } from "lucide-react";
 import { InvitationCard } from "@/components/invitation/InvitationCard";
 import { ScrollFade } from "@/components/animations/ScrollFade";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Invitation {
   id: string;
@@ -98,6 +98,11 @@ export default function InvitationsPage() {
     }
   };
 
+  const handleDelete = (deletedId: string) => {
+    setInvitations((prev) => prev.filter((inv) => inv.id !== deletedId));
+    setTotal((prev) => prev - 1);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -175,23 +180,36 @@ export default function InvitationsPage() {
           </div>
         </ScrollFade>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {invitations.map((invitation, index) => (
-            <ScrollFade key={invitation.id} delay={index * 0.1}>
-              <InvitationCard
-                id={invitation.id}
-                groomName={invitation.groomName}
-                brideName={invitation.brideName}
-                weddingDate={invitation.weddingDate}
-                venueName={invitation.venueName}
-                viewCount={invitation.viewCount}
-                status={invitation.status}
-                thumbnailUrl={invitation.galleryImages?.[0] || undefined}
-                createdAt={invitation.createdAt}
-              />
-            </ScrollFade>
-          ))}
-        </div>
+        <AnimatePresence mode="popLayout">
+          <motion.div
+            layout
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          >
+            {invitations.map((invitation) => (
+              <motion.div
+                key={invitation.id}
+                layout
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.3 }}
+              >
+                <InvitationCard
+                  id={invitation.id}
+                  groomName={invitation.groomName}
+                  brideName={invitation.brideName}
+                  weddingDate={invitation.weddingDate}
+                  venueName={invitation.venueName}
+                  viewCount={invitation.viewCount}
+                  status={invitation.status}
+                  thumbnailUrl={invitation.galleryImages?.[0] || undefined}
+                  createdAt={invitation.createdAt}
+                  onDelete={handleDelete}
+                />
+              </motion.div>
+            ))}
+          </motion.div>
+        </AnimatePresence>
       )}
     </div>
   );
