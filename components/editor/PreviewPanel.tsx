@@ -164,7 +164,12 @@ export function PreviewPanel({ invitation }: PreviewPanelProps) {
 
       {/* 미리보기 영역 - 폰 프레임 */}
       <div className="flex-1 overflow-auto p-8 flex items-start justify-center">
-        <div className="relative">
+        <div
+          className="relative transition-transform origin-top"
+          style={{
+            transform: `scale(${zoom / 100})`,
+          }}
+        >
           {/* 폰 프레임 */}
           {device === 'mobile' && (
             <div className="absolute inset-0 -m-3">
@@ -238,16 +243,13 @@ export function PreviewPanel({ invitation }: PreviewPanelProps) {
 
           {/* 실제 콘텐츠 */}
           <div
-            className={`relative bg-white transition-all origin-top ${
+            className={`relative bg-white ${
               device === 'mobile'
                 ? `w-[375px] h-[812px] overflow-y-auto shadow-inner ${
                     phoneModel === 'iphone' ? 'rounded-[2.75rem]' : 'rounded-[2.25rem]'
                   }`
                 : 'w-full rounded-lg overflow-hidden shadow-xl'
             }`}
-            style={{
-              transform: `scale(${zoom / 100})`,
-            }}
           >
             <TemplateComponent data={previewData} isPreview />
           </div>
