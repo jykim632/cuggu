@@ -1,0 +1,68 @@
+import Replicate from 'replicate';
+
+const replicate = new Replicate({
+  auth: process.env.REPLICATE_API_TOKEN!,
+});
+
+export type AIStyle =
+  | 'CLASSIC'
+  | 'MODERN'
+  | 'VINTAGE'
+  | 'ROMANTIC'
+  | 'CINEMATIC';
+
+const STYLE_PROMPTS: Record<AIStyle, string> = {
+  CLASSIC:
+    'elegant traditional Korean wedding hanbok, soft lighting, professional studio photography',
+  MODERN:
+    'contemporary wedding dress, minimalist background, natural light, editorial style',
+  VINTAGE:
+    'vintage wedding attire, warm sepia tones, romantic atmosphere, film photography',
+  ROMANTIC: 'romantic wedding scene, soft focus, dreamy lighting, pastel colors',
+  CINEMATIC:
+    'cinematic wedding portrait, dramatic lighting, high fashion, magazine cover',
+};
+
+/**
+ * Replicate로 웨딩 사진 4장 생성
+ *
+ * @param imageUrl - 원본 사진 URL (S3)
+ * @param style - 웨딩 스타일
+ * @returns 생성된 4장의 URL 배열
+ */
+export async function generateWeddingPhotos(
+  imageUrl: string,
+  style: AIStyle
+): Promise<{
+  urls: string[];
+  replicateId: string;
+  cost: number;
+}> {
+  const prompt = STYLE_PROMPTS[style];
+
+  // Flux 모델 사용 (Replicate)
+  const output = (await replicate.run('black-forest-labs/flux-1.1-pro', {
+    input: {
+      prompt: `${prompt}, based on this face reference`,
+      image: imageUrl,
+      num_outputs: 4,
+      aspect_ratio: '3:4',
+      output_format: 'png',
+      output_quality: 90,
+    },
+  })) as string[];
+
+  // Replicate는 배열로 4개 URL 반환
+  if (!Array.isArray(output) || output.length !== 4) {
+    throw new Error('Unexpected Replicate output format');
+  }
+
+  // 비용 계산 ($0.04 per image)
+  const cost = 4 * 0.04;
+
+  return {
+    urls: output,
+    replicateId: 'prediction_id', // Replicate API에서 반환
+    cost,
+  };
+}
