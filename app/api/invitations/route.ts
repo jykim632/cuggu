@@ -148,7 +148,10 @@ export async function GET(req: NextRequest) {
 
     // 본인 청첩장만 조회 (삭제된 것 제외)
     const userInvitations = await db.query.invitations.findMany({
-      where: eq(invitations.userId, session.user.id),
+      where: and(
+        eq(invitations.userId, session.user.id),
+        ne(invitations.status, 'DELETED')
+      ),
       orderBy: [desc(invitations.createdAt)],
       limit: pageSize,
       offset: offset,
@@ -157,11 +160,16 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // 전체 개수
+    // 전체 개수 (삭제된 것 제외)
     const [{ count }] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(invitations)
-      .where(eq(invitations.userId, session.user.id));
+      .where(
+        and(
+          eq(invitations.userId, session.user.id),
+          ne(invitations.status, 'DELETED')
+        )
+      );
 
     return NextResponse.json({
       success: true,
