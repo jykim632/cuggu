@@ -3,12 +3,14 @@ import { auth } from '@/auth';
 import { db } from '@/db';
 import { users, aiGenerations } from '@/db/schema';
 import { eq } from 'drizzle-orm';
-import { checkCredits, deductCredits, refundCredits } from '@/lib/ai/credits';
+import { checkCreditsFromUser, deductCredits, refundCredits } from '@/lib/ai/credits';
 import { detectFace } from '@/lib/ai/face-detection';
 import { uploadToS3 } from '@/lib/ai/s3';
 import { generateWeddingPhotos, AIStyle } from '@/lib/ai/replicate';
 import { rateLimit } from '@/lib/ai/rate-limit';
 import { z } from 'zod';
+import { AI_CONFIG, FILE_SIGNATURES } from '@/lib/ai/constants';
+import { logger } from '@/lib/ai/logger';
 
 // Style 런타임 검증 스키마
 const AIStyleSchema = z.enum([
@@ -20,6 +22,9 @@ const AIStyleSchema = z.enum([
 ]);
 
 export async function POST(request: NextRequest) {
+  let userId: string | undefined;
+  let style: string | undefined;
+
   try {
     // 1. 인증 확인
     const session = await auth();
@@ -35,6 +40,8 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
+
+    userId = user.id;
 
     // 3. Rate Limiting 확인
     const allowed = await rateLimit(user.id);
@@ -68,33 +75,44 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    const style = styleValidation.data;
+    const styleData = styleValidation.data;
+    style = styleData;
 
     // 5. 파일 검증
-    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/jpg'];
-
-    if (!ALLOWED_TYPES.includes(image.type)) {
+    if (!AI_CONFIG.ALLOWED_MIME_TYPES.includes(image.type as any)) {
       return NextResponse.json(
         { error: 'JPG, PNG 파일만 업로드 가능합니다' },
         { status: 400 }
       );
     }
 
-    if (image.size > 10 * 1024 * 1024) {
-      // 10MB
+    if (image.size > AI_CONFIG.MAX_FILE_SIZE) {
       return NextResponse.json(
         { error: 'File too large (max 10MB)' },
         { status: 400 }
       );
     }
 
+    // TODO: Sharp 라이브러리로 이미지 압축
+    // - 10MB 원본 → 800x800 리사이징, quality 85
+    // - S3 비용 절감 + Replicate 처리 속도 향상
+    // - pnpm add sharp
+
     // 이미지 버퍼 변환 (파일 시그니처 검증 위해 먼저 실행)
     const arrayBuffer = await image.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
     // 파일 시그니처 검증 (Magic Number)
-    const isPNG = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47;
-    const isJPEG = buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+    const isPNG =
+      buffer[0] === FILE_SIGNATURES.PNG[0] &&
+      buffer[1] === FILE_SIGNATURES.PNG[1] &&
+      buffer[2] === FILE_SIGNATURES.PNG[2] &&
+      buffer[3] === FILE_SIGNATURES.PNG[3];
+
+    const isJPEG =
+      buffer[0] === FILE_SIGNATURES.JPEG_START[0] &&
+      buffer[1] === FILE_SIGNATURES.JPEG_START[1] &&
+      buffer[2] === FILE_SIGNATURES.JPEG_START[2];
 
     if (!isPNG && !isJPEG) {
       return NextResponse.json(
@@ -104,7 +122,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 6. 크레딧 확인
-    const { hasCredits, balance } = await checkCredits(user.id);
+    const { hasCredits, balance } = checkCreditsFromUser(user);
     if (!hasCredits) {
       return NextResponse.json(
         { error: 'Insufficient credits', balance },
@@ -117,6 +135,14 @@ export async function POST(request: NextRequest) {
     if (!faceResult.success) {
       return NextResponse.json({ error: faceResult.error }, { status: 400 });
     }
+
+    // TODO: Drizzle 트랜잭션으로 크레딧 차감~이력 저장 묶기
+    // await db.transaction(async (tx) => {
+    //   await deductCredits(user.id, 1, tx);
+    //   ... S3 업로드, AI 생성
+    //   await tx.insert(aiGenerations).values(...);
+    // });
+    // 이유: 트랜잭션으로 묶으면 S3/Replicate 외부 API 실패 시 롤백 복잡. 현재 환불 로직이 더 명확.
 
     // 9. 크레딧 차감 (트랜잭션)
     await deductCredits(user.id, 1);
@@ -133,7 +159,7 @@ export async function POST(request: NextRequest) {
       await db.insert(aiGenerations).values({
         userId: user.id,
         originalUrl: '', // S3 실패 시 빈 문자열
-        style,
+        style: styleData,
         status: 'FAILED',
         creditsUsed: 0,
         cost: 0,
@@ -152,7 +178,7 @@ export async function POST(request: NextRequest) {
     let cost: number;
 
     try {
-      const result = await generateWeddingPhotos(originalUrl, style);
+      const result = await generateWeddingPhotos(originalUrl, styleData);
       generatedUrls = result.urls;
       replicateId = result.replicateId;
       cost = result.cost;
@@ -164,7 +190,7 @@ export async function POST(request: NextRequest) {
       await db.insert(aiGenerations).values({
         userId: user.id,
         originalUrl,
-        style,
+        style: styleData,
         status: 'FAILED',
         creditsUsed: 0, // 환불됨
         cost: 0,
@@ -179,7 +205,7 @@ export async function POST(request: NextRequest) {
       .values({
         userId: user.id,
         originalUrl,
-        style,
+        style: styleData,
         generatedUrls,
         status: 'COMPLETED',
         creditsUsed: 1,
@@ -201,7 +227,13 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('AI generation error:', error);
+    logger.error('AI generation failed', {
+      userId,
+      style,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
     return NextResponse.json(
       { error: 'AI 생성 중 오류가 발생했습니다' },
       { status: 500 }

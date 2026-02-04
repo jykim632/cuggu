@@ -1,5 +1,6 @@
 import { Redis } from '@upstash/redis';
 import { env } from './env';
+import { AI_CONFIG } from './constants';
 
 const redis = new Redis({
   url: env.UPSTASH_REDIS_REST_URL,
@@ -11,8 +12,8 @@ const redis = new Redis({
  */
 export async function rateLimit(userId: string): Promise<boolean> {
   const key = `ratelimit:ai:${userId}`;
-  const limit = 5; // 5회/10분
-  const window = 600; // 10분 (초)
+  const limit = AI_CONFIG.RATE_LIMIT_REQUESTS;
+  const window = AI_CONFIG.RATE_LIMIT_WINDOW;
 
   // Lua 스크립트로 INCR + EXPIRE 원자적 실행
   const script = `

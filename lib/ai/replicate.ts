@@ -1,5 +1,6 @@
 import Replicate from 'replicate';
 import { env } from './env';
+import { AI_CONFIG } from './constants';
 
 const replicate = new Replicate({
   auth: env.REPLICATE_API_TOKEN,
@@ -47,6 +48,11 @@ export async function generateWeddingPhotos(
 }> {
   const prompt = STYLE_PROMPTS[style];
 
+  // TODO: Replicate Webhook으로 비동기 처리
+  // - 현재: 동기 대기 (20-40초 블로킹)
+  // - 개선: webhook으로 PENDING 상태 즉시 반환, 완료 시 업데이트
+  // - 참고: https://replicate.com/docs/webhooks
+
   // Flux 모델 사용 (Replicate)
   // run() 메서드는 prediction을 생성하고 자동으로 완료를 기다림
   const prediction = await replicate.predictions.create({
@@ -54,7 +60,7 @@ export async function generateWeddingPhotos(
     input: {
       prompt: `${prompt}, based on this face reference`,
       image: imageUrl,
-      num_outputs: 4,
+      num_outputs: AI_CONFIG.BATCH_SIZE,
       aspect_ratio: '3:4',
       output_format: 'png',
       output_quality: 90,
@@ -66,12 +72,12 @@ export async function generateWeddingPhotos(
   const output = completed.output as string[];
 
   // Replicate는 배열로 4개 URL 반환
-  if (!Array.isArray(output) || output.length !== 4) {
+  if (!Array.isArray(output) || output.length !== AI_CONFIG.BATCH_SIZE) {
     throw new Error('Unexpected Replicate output format');
   }
 
   // 비용 계산
-  const cost = 4 * COST_PER_IMAGE;
+  const cost = AI_CONFIG.BATCH_SIZE * COST_PER_IMAGE;
 
   return {
     urls: output,

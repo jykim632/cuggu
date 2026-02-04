@@ -23,6 +23,19 @@ export async function checkCredits(userId: string): Promise<{
 }
 
 /**
+ * 크레딧 잔액 확인 (사용자 객체 직접 전달)
+ */
+export function checkCreditsFromUser(user: { aiCredits: number }): {
+  hasCredits: boolean;
+  balance: number;
+} {
+  return {
+    hasCredits: user.aiCredits > 0,
+    balance: user.aiCredits,
+  };
+}
+
+/**
  * 크레딧 차감 (트랜잭션)
  *
  * @throws Error if insufficient credits or race condition

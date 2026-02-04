@@ -1,6 +1,7 @@
 import { FaceClient } from '@azure/cognitiveservices-face';
 import { CognitiveServicesCredentials } from '@azure/ms-rest-azure-js';
 import { env } from './env';
+import { logger } from './logger';
 
 const credentials = new CognitiveServicesCredentials(
   env.AZURE_FACE_API_KEY
@@ -42,7 +43,11 @@ export async function detectFace(imageBuffer: Buffer): Promise<{
 
     return { success: true, faceCount: 1 };
   } catch (error: any) {
-    console.error('Face detection error:', error);
+    logger.error('Face detection error', {
+      error: error instanceof Error ? error.message : String(error),
+      statusCode: error.statusCode,
+      code: error.code,
+    });
 
     // Azure Face API 에러 코드별 처리
     if (error.statusCode === 401 || error.code === 'Unauthorized') {
