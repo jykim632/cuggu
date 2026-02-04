@@ -95,6 +95,7 @@ export const users = pgTable('users', {
   role: userRoleEnum('role').default('USER').notNull(),
   premiumPlan: premiumPlanEnum('premium_plan').default('FREE').notNull(),
   aiCredits: integer('ai_credits').default(2).notNull(),
+  emailNotifications: boolean('email_notifications').default(true).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

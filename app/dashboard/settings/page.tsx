@@ -1,24 +1,109 @@
 "use client";
 
-import { useState } from "react";
-import { User, CreditCard, Bell, Shield, ChevronRight, Sparkles } from "lucide-react";
+import { useState, useEffect } from "react";
+import { User, CreditCard, Bell, Shield, ChevronRight, Sparkles, Loader2 } from "lucide-react";
 import { ScrollFade } from "@/components/animations/ScrollFade";
 import { motion } from "framer-motion";
 
-export default function SettingsPage() {
-  const [emailNotifications, setEmailNotifications] = useState(true);
+interface UserProfile {
+  id: string;
+  email: string;
+  name: string | null;
+  image: string | null;
+  premiumPlan: string;
+  aiCredits: number;
+  emailNotifications: boolean;
+  createdAt: string;
+  isPremium: boolean;
+}
 
-  // TODO: 실제 데이터는 DB/API에서 가져오기
-  const user = {
-    email: "user@example.com",
-    createdAt: "2026-01-15",
-    isPremium: false,
-    aiCredits: 2,
+interface PaymentHistory {
+  id: string;
+  date: string;
+  amount: number;
+  description: string;
+  status: string;
+  method: string;
+  orderId: string | null;
+}
+
+export default function SettingsPage() {
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [profileRes, paymentsRes] = await Promise.all([
+        fetch("/api/user/profile"),
+        fetch("/api/payments/history"),
+      ]);
+
+      const profileResult = await profileRes.json();
+      const paymentsResult = await paymentsRes.json();
+
+      if (profileResult.success) {
+        setUser(profileResult.data);
+      }
+
+      if (paymentsResult.success) {
+        setPaymentHistory(paymentsResult.data);
+      }
+    } catch (error) {
+      console.error("데이터 조회 실패:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const paymentHistory = [
-    // { id: "1", date: "2026-02-01", amount: 9900, description: "프리미엄 플랜" },
-  ];
+  const handleToggleNotifications = async () => {
+    if (!user) return;
+
+    setIsSaving(true);
+    const newValue = !user.emailNotifications;
+
+    try {
+      const response = await fetch("/api/user/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emailNotifications: newValue }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setUser({ ...user, emailNotifications: newValue });
+      } else {
+        alert("설정 저장에 실패했습니다. 다시 시도해주세요.");
+      }
+    } catch (error) {
+      console.error("설정 업데이트 실패:", error);
+      alert("설정 저장에 실패했습니다. 다시 시도해주세요.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-pink-600" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <p className="text-gray-600">사용자 정보를 불러올 수 없습니다.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl space-y-8">
@@ -49,6 +134,15 @@ export default function SettingsPage() {
                 <p className="text-sm text-gray-600 mt-1">{user.email}</p>
               </div>
             </div>
+
+            {user.name && (
+              <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">이름</p>
+                  <p className="text-sm text-gray-600 mt-1">{user.name}</p>
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center justify-between py-3 border-b border-gray-100">
               <div>
@@ -108,7 +202,7 @@ export default function SettingsPage() {
               <motion.div
                 className="h-full bg-gradient-to-r from-pink-500 to-purple-500"
                 initial={{ width: 0 }}
-                animate={{ width: `${(user.aiCredits / 10) * 100}%` }}
+                animate={{ width: `${Math.min((user.aiCredits / 10) * 100, 100)}%` }}
                 transition={{ duration: 1, ease: "easeOut" }}
               />
             </div>
@@ -155,15 +249,17 @@ export default function SettingsPage() {
                 </p>
               </div>
               <button
-                onClick={() => setEmailNotifications(!emailNotifications)}
+                onClick={handleToggleNotifications}
+                disabled={isSaving}
                 className={`
                   relative w-12 h-6 rounded-full transition-colors duration-200
-                  ${emailNotifications ? "bg-pink-600" : "bg-gray-300"}
+                  ${user.emailNotifications ? "bg-pink-600" : "bg-gray-300"}
+                  ${isSaving ? "opacity-50 cursor-not-allowed" : ""}
                 `}
               >
                 <motion.div
                   className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm"
-                  animate={{ x: emailNotifications ? 24 : 0 }}
+                  animate={{ x: user.emailNotifications ? 24 : 0 }}
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
                 />
               </button>
@@ -205,11 +301,35 @@ export default function SettingsPage() {
                   className="flex items-center justify-between p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
                 >
                   <div>
-                    <p className="text-sm font-semibold text-gray-900">
-                      {payment.description}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-gray-900">
+                        {payment.description}
+                      </p>
+                      <span
+                        className={`
+                          text-xs px-2 py-0.5 rounded-full
+                          ${
+                            payment.status === "COMPLETED"
+                              ? "bg-green-100 text-green-700"
+                              : payment.status === "PENDING"
+                              ? "bg-yellow-100 text-yellow-700"
+                              : "bg-red-100 text-red-700"
+                          }
+                        `}
+                      >
+                        {payment.status === "COMPLETED"
+                          ? "완료"
+                          : payment.status === "PENDING"
+                          ? "대기중"
+                          : "실패"}
+                      </span>
+                    </div>
                     <p className="text-xs text-gray-600 mt-1">
-                      {new Date(payment.date).toLocaleDateString("ko-KR")}
+                      {new Date(payment.date).toLocaleDateString("ko-KR", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
                     </p>
                   </div>
                   <div className="text-right">
