@@ -1,10 +1,64 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { Loader2 } from "lucide-react";
 
 export function EmptyState() {
+  const router = useRouter();
+  const [isCreating, setIsCreating] = useState(false);
+
+  const handleCreateInvitation = async () => {
+    setIsCreating(true);
+
+    try {
+      // 기본 청첩장 데이터로 생성
+      const response = await fetch("/api/invitations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          templateId: "classic",
+          groom: {
+            name: "신랑",
+          },
+          bride: {
+            name: "신부",
+          },
+          wedding: {
+            date: new Date(
+              new Date().setMonth(new Date().getMonth() + 3)
+            ).toISOString(), // 3개월 후
+            venue: {
+              name: "예식장",
+              address: "주소를 입력하세요",
+            },
+          },
+          content: {
+            greeting: "",
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("청첩장 생성 실패");
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.data?.id) {
+        // 편집기로 이동
+        router.push(`/editor/${result.data.id}`);
+      }
+    } catch (error) {
+      console.error("청첩장 생성 실패:", error);
+      alert("청첩장 생성에 실패했습니다. 다시 시도해주세요.");
+      setIsCreating(false);
+    }
+  };
+
   return (
     <Card className="relative overflow-hidden">
       <CardContent className="text-center py-16">
@@ -69,10 +123,24 @@ export function EmptyState() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
           >
-            <Button size="lg" className="shadow-lg" disabled>
-              첫 청첩장 만들기
+            <Button
+              size="lg"
+              className="shadow-lg"
+              onClick={handleCreateInvitation}
+              disabled={isCreating}
+            >
+              {isCreating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  생성 중...
+                </>
+              ) : (
+                "첫 청첩장 만들기"
+              )}
             </Button>
-            <p className="text-sm text-gray-500 mt-4">곧 사용 가능합니다</p>
+            <p className="text-sm text-gray-500 mt-4">
+              무료로 시작하고, 필요한 기능만 결제하세요
+            </p>
           </motion.div>
         </motion.div>
       </CardContent>
