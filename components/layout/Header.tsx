@@ -9,21 +9,23 @@ export function Header() {
           Cuggu
         </Link>
         <nav className="hidden md:flex items-center gap-6">
-          <Link
-            href="#templates"
+          <a
+            href="#features"
             className="text-gray-600 hover:text-gray-900 transition-colors"
           >
             템플릿
-          </Link>
-          <Link
+          </a>
+          <a
             href="#pricing"
             className="text-gray-600 hover:text-gray-900 transition-colors"
           >
             가격
+          </a>
+          <Link href="/login">
+            <Button variant="outline" size="sm">
+              로그인
+            </Button>
           </Link>
-          <Button variant="outline" size="sm">
-            로그인
-          </Button>
         </nav>
       </div>
     </header>
