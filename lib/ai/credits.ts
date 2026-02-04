@@ -1,6 +1,6 @@
 import { db } from '@/db';
 import { users } from '@/db/schema';
-import { eq, sql } from 'drizzle-orm';
+import { eq, sql, and } from 'drizzle-orm';
 
 /**
  * 크레딧 잔액 확인
@@ -37,17 +37,16 @@ export async function deductCredits(
       aiCredits: sql`${users.aiCredits} - ${amount}`,
       updatedAt: new Date(),
     })
-    .where(eq(users.id, userId))
+    .where(
+      and(
+        eq(users.id, userId),
+        sql`${users.aiCredits} >= ${amount}`
+      )
+    )
     .returning({ aiCredits: users.aiCredits });
 
-  // Race condition 체크
-  if (result.length === 0 || result[0].aiCredits < 0) {
-    // 롤백
-    await db
-      .update(users)
-      .set({ aiCredits: sql`${users.aiCredits} + ${amount}` })
-      .where(eq(users.id, userId));
-
+  // 조건부 UPDATE이므로 잔액 부족 시 result가 비어있음
+  if (result.length === 0) {
     throw new Error('Insufficient credits');
   }
 }

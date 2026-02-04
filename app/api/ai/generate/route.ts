@@ -8,6 +8,16 @@ import { detectFace } from '@/lib/ai/face-detection';
 import { uploadToS3 } from '@/lib/ai/s3';
 import { generateWeddingPhotos, AIStyle } from '@/lib/ai/replicate';
 import { rateLimit } from '@/lib/ai/rate-limit';
+import { z } from 'zod';
+
+// Style 런타임 검증 스키마
+const AIStyleSchema = z.enum([
+  'CLASSIC',
+  'MODERN',
+  'VINTAGE',
+  'ROMANTIC',
+  'CINEMATIC',
+]);
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,14 +48,27 @@ export async function POST(request: NextRequest) {
     // 4. FormData 파싱
     const formData = await request.formData();
     const image = formData.get('image') as File;
-    const style = formData.get('style') as AIStyle;
+    const styleRaw = formData.get('style') as string;
 
-    if (!image || !style) {
+    if (!image || !styleRaw) {
       return NextResponse.json(
         { error: 'Image and style are required' },
         { status: 400 }
       );
     }
+
+    // Style 검증
+    const styleValidation = AIStyleSchema.safeParse(styleRaw);
+    if (!styleValidation.success) {
+      return NextResponse.json(
+        {
+          error:
+            'Invalid style. Must be one of: CLASSIC, MODERN, VINTAGE, ROMANTIC, CINEMATIC',
+        },
+        { status: 400 }
+      );
+    }
+    const style = styleValidation.data;
 
     // 5. 파일 검증
     if (!image.type.startsWith('image/')) {

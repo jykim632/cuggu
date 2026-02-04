@@ -41,7 +41,9 @@ export async function generateWeddingPhotos(
   const prompt = STYLE_PROMPTS[style];
 
   // Flux 모델 사용 (Replicate)
-  const output = (await replicate.run('black-forest-labs/flux-1.1-pro', {
+  // run() 메서드는 prediction을 생성하고 자동으로 완료를 기다림
+  const prediction = await replicate.predictions.create({
+    model: 'black-forest-labs/flux-1.1-pro',
     input: {
       prompt: `${prompt}, based on this face reference`,
       image: imageUrl,
@@ -50,7 +52,11 @@ export async function generateWeddingPhotos(
       output_format: 'png',
       output_quality: 90,
     },
-  })) as string[];
+  });
+
+  // Prediction 완료 대기
+  const completed = await replicate.wait(prediction);
+  const output = completed.output as string[];
 
   // Replicate는 배열로 4개 URL 반환
   if (!Array.isArray(output) || output.length !== 4) {
@@ -62,7 +68,7 @@ export async function generateWeddingPhotos(
 
   return {
     urls: output,
-    replicateId: 'prediction_id', // Replicate API에서 반환
+    replicateId: prediction.id,
     cost,
   };
 }

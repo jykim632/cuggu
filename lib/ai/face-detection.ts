@@ -40,12 +40,38 @@ export async function detectFace(imageBuffer: Buffer): Promise<{
     }
 
     return { success: true, faceCount: 1 };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Face detection error:', error);
+
+    // Azure Face API 에러 코드별 처리
+    if (error.statusCode === 401 || error.code === 'Unauthorized') {
+      return {
+        success: false,
+        faceCount: 0,
+        error: 'API 설정 오류입니다. 관리자에게 문의하세요.',
+      };
+    }
+
+    if (error.statusCode === 429 || error.code === 'RateLimitExceeded') {
+      return {
+        success: false,
+        faceCount: 0,
+        error: '일시적으로 서비스가 혼잡합니다. 잠시 후 다시 시도해주세요.',
+      };
+    }
+
+    if (error.statusCode === 400 || error.code === 'InvalidImageSize') {
+      return {
+        success: false,
+        faceCount: 0,
+        error: '이미지 크기가 너무 작거나 큽니다.',
+      };
+    }
+
     return {
       success: false,
       faceCount: 0,
-      error: '얼굴 감지 실패',
+      error: '얼굴 감지 실패. 정면을 바라본 선명한 사진을 업로드해주세요.',
     };
   }
 }

@@ -25,6 +25,8 @@ export async function uploadToS3(
 ): Promise<string> {
   const key = `${prefix}/${createId()}.png`;
 
+  // S3 버킷 정책으로 CloudFront만 접근 허용
+  // 개인정보 보호를 위해 public-read 사용하지 않음
   const upload = new Upload({
     client: s3,
     params: {
@@ -32,7 +34,6 @@ export async function uploadToS3(
       Key: key,
       Body: buffer,
       ContentType: contentType,
-      ACL: 'public-read', // 공개 읽기 권한
     },
   });
 
