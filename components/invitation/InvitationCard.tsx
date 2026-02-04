@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { FileHeart, Eye, Calendar, Edit, Share2, Trash2, MoreVertical } from "lucide-react";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -42,13 +41,12 @@ export function InvitationCard({
   createdAt,
   onDelete,
 }: InvitationCardProps) {
-  const router = useRouter();
   const [showMenu, setShowMenu] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const { confirm, isOpen, options, handleConfirm, handleCancel } = useConfirm();
 
   const handleEdit = () => {
-    router.push(`/editor/${id}`);
+    window.open(`/editor/${id}`, "_blank");
   };
 
   const handleShare = async () => {
@@ -198,6 +196,8 @@ export function InvitationCard({
           <span className="text-xs text-gray-500">{relativeDate}</span>
           <Link
             href={`/editor/${id}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-sm font-semibold text-pink-600 hover:text-pink-700 transition-colors"
           >
             편집하기 →

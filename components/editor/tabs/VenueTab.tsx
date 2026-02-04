@@ -1,6 +1,8 @@
 'use client';
 
 import { useInvitationEditor } from '@/stores/invitation-editor';
+import { DatePicker } from '@/components/ui/DatePicker';
+import { TimePicker } from '@/components/ui/TimePicker';
 
 /**
  * 예식 정보 탭
@@ -14,11 +16,49 @@ import { useInvitationEditor } from '@/stores/invitation-editor';
 export function VenueTab() {
   const { invitation, updateInvitation } = useInvitationEditor();
 
-  const handleWeddingChange = (field: string, value: any) => {
+  // wedding.date ISO string을 날짜/시간으로 파싱
+  const parseDateAndTime = (isoString?: string) => {
+    if (!isoString) return { date: undefined, time: undefined };
+    const dt = new Date(isoString);
+    return {
+      date: dt,
+      time: `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`,
+    };
+  };
+
+  const { date: weddingDate, time: weddingTime } = parseDateAndTime(invitation.wedding?.date);
+
+  // 날짜만 변경
+  const handleDateChange = (date: Date | undefined) => {
+    if (!date) return;
+
+    // 기존 시간 유지 (없으면 시간 설정 안 함)
+    if (weddingTime) {
+      const [hours, minutes] = weddingTime.split(':');
+      date.setHours(Number(hours), Number(minutes));
+    }
+
     updateInvitation({
       wedding: {
         ...invitation.wedding,
-        [field]: value,
+        date: date.toISOString(),
+        venue: invitation.wedding?.venue,
+      },
+    });
+  };
+
+  // 시간만 변경
+  const handleTimeChange = (time: string) => {
+    // 날짜가 없으면 오늘 날짜로 설정
+    const baseDate = weddingDate || new Date();
+    const [hours, minutes] = time.split(':');
+    baseDate.setHours(Number(hours), Number(minutes), 0, 0);
+
+    updateInvitation({
+      wedding: {
+        ...invitation.wedding,
+        date: baseDate.toISOString(),
+        venue: invitation.wedding?.venue,
       },
     });
   };
@@ -52,22 +92,10 @@ export function VenueTab() {
             <label className="block text-xs font-semibold text-slate-700 mb-2">
               날짜 <span className="text-red-500">*</span>
             </label>
-            <input
-              type="date"
-              value={
-                invitation.wedding?.date
-                  ? new Date(invitation.wedding.date).toISOString().split('T')[0]
-                  : ''
-              }
-              onChange={(e) => {
-                const dateTime = invitation.wedding?.date
-                  ? new Date(invitation.wedding.date)
-                  : new Date();
-                const [year, month, day] = e.target.value.split('-');
-                dateTime.setFullYear(Number(year), Number(month) - 1, Number(day));
-                handleWeddingChange('date', dateTime.toISOString());
-              }}
-              className="w-full px-4 py-3 text-sm bg-gradient-to-br from-white to-pink-50/20 border border-pink-200/50 rounded-xl focus:ring-2 focus:ring-pink-400 focus:border-pink-300 focus:bg-white transition-all duration-200 placeholder:text-slate-400"
+            <DatePicker
+              selected={weddingDate}
+              onSelect={handleDateChange}
+              placeholder="날짜를 선택하세요"
             />
           </div>
 
@@ -75,22 +103,10 @@ export function VenueTab() {
             <label className="block text-xs font-semibold text-slate-700 mb-2">
               시간 <span className="text-red-500">*</span>
             </label>
-            <input
-              type="time"
-              value={
-                invitation.wedding?.date
-                  ? new Date(invitation.wedding.date).toTimeString().slice(0, 5)
-                  : ''
-              }
-              onChange={(e) => {
-                const dateTime = invitation.wedding?.date
-                  ? new Date(invitation.wedding.date)
-                  : new Date();
-                const [hours, minutes] = e.target.value.split(':');
-                dateTime.setHours(Number(hours), Number(minutes));
-                handleWeddingChange('date', dateTime.toISOString());
-              }}
-              className="w-full px-4 py-3 text-sm bg-gradient-to-br from-white to-pink-50/20 border border-pink-200/50 rounded-xl focus:ring-2 focus:ring-pink-400 focus:border-pink-300 focus:bg-white transition-all duration-200 placeholder:text-slate-400"
+            <TimePicker
+              value={weddingTime}
+              onChange={handleTimeChange}
+              placeholder="시간을 선택하세요"
             />
           </div>
         </div>

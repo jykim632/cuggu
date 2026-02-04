@@ -27,20 +27,50 @@ export function PreviewPanel({ invitation }: PreviewPanelProps) {
       userId: invitation.userId || 'user',
       templateId: invitation.templateId || 'classic',
 
-      groom: invitation.groom || { name: '신랑' },
-      bride: invitation.bride || { name: '신부' },
+      groom: {
+        name: invitation.groom?.name || '신랑',
+        fatherName: invitation.groom?.fatherName,
+        motherName: invitation.groom?.motherName,
+        relation: invitation.groom?.relation,
+        phone: invitation.groom?.phone,
+        account: invitation.groom?.account,
+      },
 
-      wedding: invitation.wedding || {
-        date: new Date().toISOString(),
+      bride: {
+        name: invitation.bride?.name || '신부',
+        fatherName: invitation.bride?.fatherName,
+        motherName: invitation.bride?.motherName,
+        relation: invitation.bride?.relation,
+        phone: invitation.bride?.phone,
+        account: invitation.bride?.account,
+      },
+
+      wedding: {
+        date: invitation.wedding?.date || new Date().toISOString(),
         venue: {
-          name: '예식장',
-          address: '주소를 입력하세요',
+          name: invitation.wedding?.venue?.name || '예식장',
+          address: invitation.wedding?.venue?.address || '주소를 입력하세요',
+          hall: invitation.wedding?.venue?.hall,
+          tel: invitation.wedding?.venue?.tel,
+          directions: invitation.wedding?.venue?.directions,
         },
       },
 
-      content: invitation.content || { greeting: '' },
-      gallery: invitation.gallery || { images: [] },
-      settings: invitation.settings || {},
+      content: {
+        greeting: invitation.content?.greeting || '',
+        notice: invitation.content?.notice,
+      },
+
+      gallery: {
+        coverImage: invitation.gallery?.coverImage,
+        images: invitation.gallery?.images || [],
+      },
+
+      settings: {
+        showParents: invitation.settings?.showParents ?? true,
+        showAccounts: invitation.settings?.showAccounts ?? true,
+        ...invitation.settings,
+      },
 
       isPasswordProtected: invitation.isPasswordProtected || false,
       status: 'DRAFT' as const,
