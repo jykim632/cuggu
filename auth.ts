@@ -98,6 +98,9 @@ export const authConfig = {
     async session({ session, user }) {
       if (session.user) {
         session.user.id = user.id;
+        session.user.name = user.name;
+        session.user.email = user.email;
+        session.user.image = user.image;
       }
       return session;
     },

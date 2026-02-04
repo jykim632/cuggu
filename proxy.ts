@@ -5,9 +5,15 @@ export default auth((req) => {
   const { nextUrl } = req;
   const isLoggedIn = !!req.auth;
 
+  // 하위 호환: /admin/* → /dashboard/* 리다이렉트
+  if (nextUrl.pathname.startsWith("/admin")) {
+    const newPath = nextUrl.pathname.replace("/admin", "/dashboard");
+    return NextResponse.redirect(new URL(newPath + nextUrl.search, nextUrl));
+  }
+
   // 보호된 라우트
   const isProtectedRoute =
-    nextUrl.pathname.startsWith("/admin") ||
+    nextUrl.pathname.startsWith("/dashboard") ||
     nextUrl.pathname.startsWith("/editor") ||
     nextUrl.pathname.startsWith("/settings");
 
@@ -23,7 +29,7 @@ export default auth((req) => {
 
   // 로그인한 사용자가 로그인 페이지 접근 시
   if (isAuthRoute && isLoggedIn) {
-    return NextResponse.redirect(new URL("/admin/dashboard", nextUrl));
+    return NextResponse.redirect(new URL("/dashboard", nextUrl));
   }
 
   return NextResponse.next();

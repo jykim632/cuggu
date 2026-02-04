@@ -9,22 +9,22 @@ import { motion } from "framer-motion";
 const navItems = [
   {
     title: "대시보드",
-    href: "/admin",
+    href: "/dashboard",
     icon: Home,
   },
   {
     title: "내 청첩장",
-    href: "/admin/invitations",
+    href: "/dashboard/invitations",
     icon: FileHeart,
   },
   {
     title: "AI 사진 생성",
-    href: "/admin/ai-photos",
+    href: "/dashboard/ai-photos",
     icon: Sparkles,
   },
   {
     title: "설정",
-    href: "/admin/settings",
+    href: "/dashboard/settings",
     icon: Settings,
   },
 ];

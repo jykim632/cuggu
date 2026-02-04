@@ -11,7 +11,7 @@ export default async function LoginPage() {
           <form
             action={async () => {
               "use server";
-              await signIn("kakao", { redirectTo: "/admin/dashboard" });
+              await signIn("kakao", { redirectTo: "/dashboard" });
             }}
           >
             <button
