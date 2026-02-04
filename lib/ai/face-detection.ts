@@ -1,10 +1,11 @@
 import { FaceClient } from '@azure/cognitiveservices-face';
 import { CognitiveServicesCredentials } from '@azure/ms-rest-azure-js';
+import { env } from './env';
 
 const credentials = new CognitiveServicesCredentials(
-  process.env.AZURE_FACE_API_KEY!
+  env.AZURE_FACE_API_KEY
 );
-const client = new FaceClient(credentials, process.env.AZURE_FACE_ENDPOINT!);
+const client = new FaceClient(credentials, env.AZURE_FACE_ENDPOINT);
 
 /**
  * 이미지에서 얼굴 감지

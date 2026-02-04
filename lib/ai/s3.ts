@@ -1,12 +1,13 @@
 import { S3Client } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import { createId } from '@paralleldrive/cuid2';
+import { env } from './env';
 
 const s3 = new S3Client({
-  region: process.env.AWS_REGION!,
+  region: env.AWS_REGION,
   credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+    accessKeyId: env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
   },
 });
 
@@ -30,7 +31,7 @@ export async function uploadToS3(
   const upload = new Upload({
     client: s3,
     params: {
-      Bucket: process.env.S3_BUCKET_NAME!,
+      Bucket: env.S3_BUCKET_NAME,
       Key: key,
       Body: buffer,
       ContentType: contentType,
@@ -40,5 +41,5 @@ export async function uploadToS3(
   await upload.done();
 
   // S3 공개 URL
-  return `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+  return `https://${env.S3_BUCKET_NAME}.s3.${env.AWS_REGION}.amazonaws.com/${key}`;
 }

@@ -71,9 +71,11 @@ export async function POST(request: NextRequest) {
     const style = styleValidation.data;
 
     // 5. 파일 검증
-    if (!image.type.startsWith('image/')) {
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/jpg'];
+
+    if (!ALLOWED_TYPES.includes(image.type)) {
       return NextResponse.json(
-        { error: 'Invalid file type' },
+        { error: 'JPG, PNG 파일만 업로드 가능합니다' },
         { status: 400 }
       );
     }
@@ -86,6 +88,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 이미지 버퍼 변환 (파일 시그니처 검증 위해 먼저 실행)
+    const arrayBuffer = await image.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // 파일 시그니처 검증 (Magic Number)
+    const isPNG = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47;
+    const isJPEG = buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+
+    if (!isPNG && !isJPEG) {
+      return NextResponse.json(
+        { error: '유효하지 않은 이미지 파일입니다' },
+        { status: 400 }
+      );
+    }
+
     // 6. 크레딧 확인
     const { hasCredits, balance } = await checkCredits(user.id);
     if (!hasCredits) {
@@ -94,10 +111,6 @@ export async function POST(request: NextRequest) {
         { status: 402 } // Payment Required
       );
     }
-
-    // 7. 이미지 버퍼 변환
-    const arrayBuffer = await image.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
 
     // 8. 얼굴 감지
     const faceResult = await detectFace(buffer);
@@ -115,7 +128,22 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       // 업로드 실패 시 크레딧 환불
       await refundCredits(user.id, 1);
-      throw error;
+
+      // 실패 이력 저장
+      await db.insert(aiGenerations).values({
+        userId: user.id,
+        originalUrl: '', // S3 실패 시 빈 문자열
+        style,
+        status: 'FAILED',
+        creditsUsed: 0,
+        cost: 0,
+      });
+
+      console.error('S3 upload error:', error);
+      return NextResponse.json(
+        { error: 'S3 업로드 실패. 잠시 후 다시 시도해주세요.' },
+        { status: 500 }
+      );
     }
 
     // 11. AI 생성 요청

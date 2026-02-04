@@ -1,8 +1,15 @@
 import Replicate from 'replicate';
+import { env } from './env';
 
 const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_TOKEN!,
+  auth: env.REPLICATE_API_TOKEN,
 });
+
+/**
+ * AI 생성 비용 (USD per image)
+ * Replicate Flux 1.1 Pro 기준
+ */
+const COST_PER_IMAGE = parseFloat(process.env.REPLICATE_COST_PER_IMAGE || '0.04');
 
 export type AIStyle =
   | 'CLASSIC'
@@ -63,8 +70,8 @@ export async function generateWeddingPhotos(
     throw new Error('Unexpected Replicate output format');
   }
 
-  // 비용 계산 ($0.04 per image)
-  const cost = 4 * 0.04;
+  // 비용 계산
+  const cost = 4 * COST_PER_IMAGE;
 
   return {
     urls: output,
