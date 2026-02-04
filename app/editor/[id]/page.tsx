@@ -47,7 +47,23 @@ export default function InvitationEditorPage() {
         }
       } catch (error) {
         console.error('청첩장 로드 실패:', error);
-        // TODO: 에러 토스트 표시
+
+        // API 없을 때 기본값으로 초기화 (임시)
+        setInvitation({
+          id: id,
+          userId: 'temp-user',
+          templateId: 'classic',
+          groom: {},
+          bride: {},
+          wedding: {},
+          content: {},
+          gallery: { images: [] },
+          settings: {},
+          status: 'DRAFT',
+          viewCount: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
       }
     }
 
