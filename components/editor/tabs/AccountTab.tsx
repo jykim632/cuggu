@@ -4,6 +4,84 @@ import { useState } from 'react';
 import { useInvitationEditor } from '@/stores/invitation-editor';
 import { Trash2, Plus } from 'lucide-react';
 
+// 계좌 입력 폼 컴포넌트 (외부로 분리)
+function AccountForm({
+  account,
+  onChange,
+  onRemove,
+  placeholder,
+  showRemove = false,
+  banks,
+}: {
+  account: any;
+  onChange: (field: string, value: string) => void;
+  onRemove?: () => void;
+  placeholder?: string;
+  showRemove?: boolean;
+  banks: string[];
+}) {
+  return (
+    <div className="space-y-3">
+      {showRemove && (
+        <div className="flex justify-between items-center">
+          <span className="text-xs text-slate-500">{placeholder}</span>
+          <button
+            type="button"
+            onClick={onRemove}
+            className="text-red-600 hover:text-red-700 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      <div>
+        <label className="block text-xs font-semibold text-slate-700 mb-2">
+          은행
+        </label>
+        <select
+          value={account?.bank || ''}
+          onChange={(e) => onChange('bank', e.target.value)}
+          className="w-full px-4 py-3 text-sm bg-gradient-to-br from-white to-pink-50/20 border border-pink-200/50 rounded-xl focus:ring-2 focus:ring-pink-400 focus:border-pink-300 focus:bg-white transition-all duration-200"
+        >
+          <option value="">선택하세요</option>
+          {banks.map((bank) => (
+            <option key={bank} value={bank}>
+              {bank}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold text-slate-700 mb-2">
+          계좌번호
+        </label>
+        <input
+          type="text"
+          value={account?.accountNumber || ''}
+          onChange={(e) => onChange('accountNumber', e.target.value)}
+          placeholder="1234-5678-9012"
+          className="w-full px-4 py-3 text-sm bg-gradient-to-br from-white to-pink-50/20 border border-pink-200/50 rounded-xl focus:ring-2 focus:ring-pink-400 focus:border-pink-300 focus:bg-white transition-all duration-200 placeholder:text-slate-400"
+        />
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold text-slate-700 mb-2">
+          예금주
+        </label>
+        <input
+          type="text"
+          value={account?.accountHolder || ''}
+          onChange={(e) => onChange('accountHolder', e.target.value)}
+          placeholder={placeholder || '홍길동'}
+          className="w-full px-4 py-3 text-sm bg-gradient-to-br from-white to-pink-50/20 border border-pink-200/50 rounded-xl focus:ring-2 focus:ring-pink-400 focus:border-pink-300 focus:bg-white transition-all duration-200 placeholder:text-slate-400"
+        />
+      </div>
+    </div>
+  );
+}
+
 /**
  * 계좌 정보 탭
  *
@@ -122,80 +200,6 @@ export function AccountTab() {
     });
   };
 
-  // 계좌 입력 폼 컴포넌트
-  const AccountForm = ({
-    account,
-    onChange,
-    onRemove,
-    placeholder,
-    showRemove = false,
-  }: {
-    account: any;
-    onChange: (field: string, value: string) => void;
-    onRemove?: () => void;
-    placeholder?: string;
-    showRemove?: boolean;
-  }) => (
-    <div className="space-y-3">
-      {showRemove && (
-        <div className="flex justify-between items-center">
-          <span className="text-xs text-slate-500">{placeholder}</span>
-          <button
-            type="button"
-            onClick={onRemove}
-            className="text-red-600 hover:text-red-700 transition-colors"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
-      <div>
-        <label className="block text-xs font-semibold text-slate-700 mb-2">
-          은행
-        </label>
-        <select
-          value={account?.bank || ''}
-          onChange={(e) => onChange('bank', e.target.value)}
-          className="w-full px-4 py-3 text-sm bg-gradient-to-br from-white to-pink-50/20 border border-pink-200/50 rounded-xl focus:ring-2 focus:ring-pink-400 focus:border-pink-300 focus:bg-white transition-all duration-200"
-        >
-          <option value="">선택하세요</option>
-          {banks.map((bank) => (
-            <option key={bank} value={bank}>
-              {bank}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label className="block text-xs font-semibold text-slate-700 mb-2">
-          계좌번호
-        </label>
-        <input
-          type="text"
-          value={account?.accountNumber || ''}
-          onChange={(e) => onChange('accountNumber', e.target.value)}
-          placeholder="1234-5678-9012"
-          className="w-full px-4 py-3 text-sm bg-gradient-to-br from-white to-pink-50/20 border border-pink-200/50 rounded-xl focus:ring-2 focus:ring-pink-400 focus:border-pink-300 focus:bg-white transition-all duration-200 placeholder:text-slate-400"
-        />
-      </div>
-
-      <div>
-        <label className="block text-xs font-semibold text-slate-700 mb-2">
-          예금주
-        </label>
-        <input
-          type="text"
-          value={account?.accountHolder || ''}
-          onChange={(e) => onChange('accountHolder', e.target.value)}
-          placeholder={placeholder || '홍길동'}
-          className="w-full px-4 py-3 text-sm bg-gradient-to-br from-white to-pink-50/20 border border-pink-200/50 rounded-xl focus:ring-2 focus:ring-pink-400 focus:border-pink-300 focus:bg-white transition-all duration-200 placeholder:text-slate-400"
-        />
-      </div>
-    </div>
-  );
-
   return (
     <div className="space-y-6">
       {/* 헤더 */}
@@ -215,6 +219,7 @@ export function AccountTab() {
             account={invitation.groom?.account}
             onChange={handleGroomAccountChange}
             placeholder={invitation.groom?.name || '신랑'}
+            banks={banks}
           />
         </div>
 
@@ -265,6 +270,7 @@ export function AccountTab() {
                           : undefined
                       }
                       showRemove
+                      banks={banks}
                     />
                   </div>
                 ))}
@@ -306,6 +312,7 @@ export function AccountTab() {
                           : undefined
                       }
                       showRemove
+                      banks={banks}
                     />
                   </div>
                 ))}
@@ -326,6 +333,7 @@ export function AccountTab() {
             account={invitation.bride?.account}
             onChange={handleBrideAccountChange}
             placeholder={invitation.bride?.name || '신부'}
+            banks={banks}
           />
         </div>
 
@@ -376,6 +384,7 @@ export function AccountTab() {
                           : undefined
                       }
                       showRemove
+                      banks={banks}
                     />
                   </div>
                 ))}
@@ -417,6 +426,7 @@ export function AccountTab() {
                           : undefined
                       }
                       showRemove
+                      banks={banks}
                     />
                   </div>
                 ))}
