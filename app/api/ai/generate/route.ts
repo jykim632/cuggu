@@ -5,11 +5,12 @@ import { users, aiGenerations } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { checkCreditsFromUser, deductCredits, refundCredits } from '@/lib/ai/credits';
 import { detectFace } from '@/lib/ai/face-detection';
-import { uploadToS3 } from '@/lib/ai/s3';
+import { uploadToS3, copyToS3 } from '@/lib/ai/s3';
 import { generateWeddingPhotos, AIStyle } from '@/lib/ai/replicate';
 import { rateLimit } from '@/lib/ai/rate-limit';
+import { isValidImageBuffer } from '@/lib/ai/validation';
 import { z } from 'zod';
-import { AI_CONFIG, FILE_SIGNATURES } from '@/lib/ai/constants';
+import { AI_CONFIG } from '@/lib/ai/constants';
 import { logger } from '@/lib/ai/logger';
 
 // Style 런타임 검증 스키마
@@ -102,28 +103,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Sharp 라이브러리로 이미지 압축
-    // - 10MB 원본 → 800x800 리사이징, quality 85
-    // - S3 비용 절감 + Replicate 처리 속도 향상
-    // - pnpm add sharp
-
-    // 이미지 버퍼 변환 (파일 시그니처 검증 위해 먼저 실행)
+    // 이미지 버퍼 변환
     const arrayBuffer = await image.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
     // 파일 시그니처 검증 (Magic Number)
-    const isPNG =
-      buffer[0] === FILE_SIGNATURES.PNG[0] &&
-      buffer[1] === FILE_SIGNATURES.PNG[1] &&
-      buffer[2] === FILE_SIGNATURES.PNG[2] &&
-      buffer[3] === FILE_SIGNATURES.PNG[3];
-
-    const isJPEG =
-      buffer[0] === FILE_SIGNATURES.JPEG_START[0] &&
-      buffer[1] === FILE_SIGNATURES.JPEG_START[1] &&
-      buffer[2] === FILE_SIGNATURES.JPEG_START[2];
-
-    if (!isPNG && !isJPEG) {
+    if (!isValidImageBuffer(buffer)) {
       return NextResponse.json(
         { error: '유효하지 않은 이미지 파일입니다' },
         { status: 400 }
@@ -217,14 +202,27 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    // 12. 생성 이력 저장
+    // 12. 생성된 이미지를 S3로 복사 (Replicate CDN → S3 영구 저장)
+    const s3CopyResults = await Promise.allSettled(
+      generatedUrls.map((url) =>
+        copyToS3(url, `ai-generated/${user.id}`)
+      )
+    );
+
+    // S3 복사 성공 시 URL 교체, 실패 시 Replicate URL 유지
+    const persistedUrls = generatedUrls.map((replicateUrl, i) => {
+      const result = s3CopyResults[i];
+      return result.status === 'fulfilled' ? result.value.url : replicateUrl;
+    });
+
+    // 13. 생성 이력 저장
     const [generation] = await db
       .insert(aiGenerations)
       .values({
         userId: user.id,
         originalUrl,
         style: styleData,
-        generatedUrls,
+        generatedUrls: persistedUrls,
         status: 'COMPLETED',
         creditsUsed: 1,
         cost,
@@ -233,7 +231,13 @@ export async function POST(request: NextRequest) {
       })
       .returning();
 
-    // 13. 응답
+    // 14. 잔여 크레딧 조회
+    const updatedUser = await db.query.users.findFirst({
+      where: eq(users.id, user.id),
+      columns: { aiCredits: true },
+    });
+
+    // 15. 응답
     return NextResponse.json({
       success: true,
       data: {
@@ -241,7 +245,7 @@ export async function POST(request: NextRequest) {
         originalUrl: generation.originalUrl,
         generatedUrls: generation.generatedUrls,
         style: generation.style,
-        remainingCredits: balance - 1,
+        remainingCredits: updatedUser?.aiCredits ?? 0,
       },
     });
   } catch (error) {
