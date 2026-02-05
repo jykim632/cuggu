@@ -127,7 +127,14 @@ export function invitationToDbUpdate(data: Record<string, any>) {
   const extendedData: Record<string, unknown> = {};
 
   // 기존 flat 컬럼 매핑
-  if (data.templateId !== undefined) updateData.templateId = data.templateId;
+  // templateId는 FK이므로 단순 문자열(classic, floral 등)이면 제외
+  // 실제 templates 테이블의 UUID인 경우에만 업데이트
+  if (data.templateId !== undefined) {
+    const simpleTemplateIds = ['classic', 'modern', 'vintage', 'floral', 'minimal'];
+    if (!simpleTemplateIds.includes(data.templateId)) {
+      updateData.templateId = data.templateId;
+    }
+  }
   if (data.groom?.name !== undefined) updateData.groomName = data.groom.name;
   if (data.bride?.name !== undefined) updateData.brideName = data.bride.name;
   if (data.wedding?.date !== undefined) {

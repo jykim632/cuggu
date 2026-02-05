@@ -97,7 +97,17 @@ export async function PUT(
 
     // 요청 바디 파싱 및 검증
     const body = await req.json();
-    const parsed = UpdateInvitationSchema.safeParse(body);
+
+    // 불완전한 account 객체 제거 (빈 객체 또는 필수 필드 누락)
+    const cleanBody = { ...body };
+    if (cleanBody.groom?.account && !cleanBody.groom.account.accountNumber) {
+      delete cleanBody.groom.account;
+    }
+    if (cleanBody.bride?.account && !cleanBody.bride.account.accountNumber) {
+      delete cleanBody.bride.account;
+    }
+
+    const parsed = UpdateInvitationSchema.safeParse(cleanBody);
 
     if (!parsed.success) {
       return NextResponse.json(
