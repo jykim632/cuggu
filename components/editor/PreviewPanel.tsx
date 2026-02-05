@@ -24,6 +24,7 @@ export function PreviewPanel({ invitation }: PreviewPanelProps) {
   const [phoneModel, setPhoneModel] = useState<'iphone' | 'galaxy'>('iphone');
 
   // 미리보기용 데이터 변환 (기본값 채우기)
+  // useMemo 의존성을 더 세부적으로 지정하여 실시간 반영 보장
   const previewData = useMemo(() => {
     return {
       id: invitation.id || 'preview',
@@ -88,6 +89,7 @@ export function PreviewPanel({ invitation }: PreviewPanelProps) {
         showAccounts: invitation.settings?.showAccounts ?? true,
         showMap: invitation.settings?.showMap ?? true,
         enableRsvp: invitation.settings?.enableRsvp ?? true,
+        sectionOrder: invitation.settings?.sectionOrder,
         ...invitation.settings,
       },
 
@@ -97,7 +99,19 @@ export function PreviewPanel({ invitation }: PreviewPanelProps) {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-  }, [invitation]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    invitation.id,
+    invitation.userId,
+    invitation.templateId,
+    invitation.groom,
+    invitation.bride,
+    invitation.wedding,
+    invitation.content,
+    invitation.gallery,
+    invitation.settings,
+    invitation.isPasswordProtected,
+  ]);
 
   // 템플릿 컴포넌트 선택
   const getTemplateComponent = (templateId: string) => {
