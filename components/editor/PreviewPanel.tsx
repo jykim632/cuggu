@@ -5,7 +5,7 @@ import { ClassicTemplate } from '@/components/templates/ClassicTemplate';
 import { ModernTemplate } from '@/components/templates/ModernTemplate';
 import { MinimalTemplate } from '@/components/templates/MinimalTemplate';
 import { FloralTemplate } from '@/components/templates/FloralTemplate';
-import { ZoomIn, ZoomOut, Smartphone, Monitor, ExternalLink } from 'lucide-react';
+import { ZoomIn, ZoomOut, Smartphone, Monitor } from 'lucide-react';
 
 interface PreviewPanelProps {
   invitation: any; // TODO: Invitation 타입
@@ -19,7 +19,7 @@ interface PreviewPanelProps {
  * - 실시간 템플릿 렌더링
  */
 export function PreviewPanel({ invitation }: PreviewPanelProps) {
-  const [zoom, setZoom] = useState(100);
+  const [zoom, setZoom] = useState(90);
   const [device, setDevice] = useState<'mobile' | 'desktop'>('mobile');
   const [phoneModel, setPhoneModel] = useState<'iphone' | 'galaxy'>('iphone');
 
@@ -196,7 +196,7 @@ export function PreviewPanel({ invitation }: PreviewPanelProps) {
         {/* 줌 조절 */}
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setZoom(Math.max(50, zoom - 25))}
+            onClick={() => setZoom(Math.max(50, zoom - 5))}
             className="p-1 hover:bg-stone-100 rounded transition-colors disabled:opacity-30"
             disabled={zoom <= 50}
           >
@@ -207,14 +207,14 @@ export function PreviewPanel({ invitation }: PreviewPanelProps) {
             type="range"
             min="50"
             max="150"
-            step="25"
+            step="5"
             value={zoom}
             onChange={(e) => setZoom(Number(e.target.value))}
             className="flex-1 h-1.5 bg-stone-200 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-stone-900 [&::-webkit-slider-thumb]:cursor-pointer"
           />
 
           <button
-            onClick={() => setZoom(Math.min(150, zoom + 25))}
+            onClick={() => setZoom(Math.min(150, zoom + 5))}
             className="p-1 hover:bg-stone-100 rounded transition-colors disabled:opacity-30"
             disabled={zoom >= 150}
           >
@@ -321,17 +321,6 @@ export function PreviewPanel({ invitation }: PreviewPanelProps) {
         </div>
       </div>
 
-      {/* 하단 버튼 */}
-      <div className="p-4 bg-white border-t border-stone-200">
-        <button
-          onClick={() => window.open(`/inv/${invitation.id}`, '_blank')}
-          disabled={!invitation.id}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-stone-900 hover:bg-stone-800 disabled:bg-stone-200 disabled:text-stone-400 text-white rounded-lg text-sm font-medium transition-colors"
-        >
-          <ExternalLink className="w-4 h-4" />
-          새 탭에서 보기
-        </button>
-      </div>
     </aside>
   );
 }
