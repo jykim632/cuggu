@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Loader2, Eye, Share2, ArrowLeft, Send, Check } from 'lucide-react';
+import { Loader2, Eye, Share2, ArrowLeft, Send, Sparkles } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { useCredits } from '@/hooks/useCredits';
 
 interface TopBarProps {
   invitation: any; // TODO: Invitation 타입
@@ -21,6 +22,7 @@ interface TopBarProps {
 export function TopBar({ invitation, isSaving, lastSaved, onUpdateInvitation }: TopBarProps) {
   const [isPublishing, setIsPublishing] = useState(false);
   const { showToast } = useToast();
+  const { credits, isLoading: creditsLoading } = useCredits();
 
   const isPublished = invitation.status === 'PUBLISHED';
 
@@ -111,6 +113,14 @@ export function TopBar({ invitation, isSaving, lastSaved, onUpdateInvitation }: 
 
       {/* 우측: 상태 + 액션 버튼 */}
       <div className="flex items-center gap-2">
+        {/* AI 크레딧 */}
+        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-stone-100 rounded-md mr-1">
+          <Sparkles className="w-3.5 h-3.5 text-stone-500" />
+          <span className="text-xs font-medium text-stone-600">
+            {creditsLoading ? '...' : credits ?? 0}
+          </span>
+        </div>
+
         {/* 저장 상태 */}
         <div className="text-xs text-stone-500 mr-2">
           {isSaving ? (

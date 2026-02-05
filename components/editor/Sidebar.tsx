@@ -1,35 +1,8 @@
 'use client';
 
 import { useInvitationEditor } from '@/stores/invitation-editor';
-import {
-  LayoutTemplate,
-  Users,
-  MapPin,
-  MessageSquare,
-  Images,
-  CreditCard,
-  Settings,
-  Check,
-  AlertCircle,
-} from 'lucide-react';
-import { LucideIcon } from 'lucide-react';
-
-interface Tab {
-  id: string;
-  label: string;
-  icon: LucideIcon;
-  required?: boolean;
-}
-
-const tabs: Tab[] = [
-  { id: 'template', label: '템플릿', icon: LayoutTemplate },
-  { id: 'basic', label: '기본 정보', icon: Users, required: true },
-  { id: 'venue', label: '예식장', icon: MapPin, required: true },
-  { id: 'greeting', label: '인사말', icon: MessageSquare },
-  { id: 'gallery', label: '갤러리', icon: Images },
-  { id: 'account', label: '계좌', icon: CreditCard },
-  { id: 'settings', label: '설정', icon: Settings },
-];
+import { Check, AlertCircle } from 'lucide-react';
+import { EDITOR_TABS } from '@/lib/editor/tabs';
 
 interface SidebarProps {
   activeTab: string;
@@ -89,7 +62,7 @@ export function Sidebar({ activeTab, invitation }: SidebarProps) {
   return (
     <aside className="w-16 bg-stone-50 border-r border-stone-200 flex-shrink-0 flex flex-col">
       <nav className="flex-1 py-4">
-        {tabs.map((tab) => {
+        {EDITOR_TABS.map((tab) => {
           const isActive = activeTab === tab.id;
           const status = getTabStatus(tab.id);
           const isCompleted = status === 'completed';

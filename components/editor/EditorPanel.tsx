@@ -7,6 +7,7 @@ import { GreetingTab } from './tabs/GreetingTab';
 import { GalleryTab } from './tabs/GalleryTab';
 import { AccountTab } from './tabs/AccountTab';
 import { SettingsTab } from './tabs/SettingsTab';
+import { StepNavigation } from './StepNavigation';
 
 interface EditorPanelProps {
   activeTab: string;
@@ -47,7 +48,9 @@ export function EditorPanel({ activeTab, invitation }: EditorPanelProps) {
   return (
     <div className="flex-1 overflow-y-auto bg-stone-50/50">
       <div className="max-w-3xl mx-auto px-8 py-6">
+        <StepNavigation position="top" />
         {renderTab()}
+        <StepNavigation position="bottom" />
       </div>
     </div>
   );
