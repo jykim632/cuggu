@@ -15,6 +15,7 @@ import {
 } from "@/lib/utils/date";
 import { GalleryLightbox } from "./GalleryLightbox";
 import { formatFamilyName } from "@/lib/utils/family-display";
+import { RSVPSection } from "@/components/rsvp/RSVPSection";
 
 interface FloralTemplateProps {
   data: Invitation;
@@ -379,6 +380,15 @@ export function FloralTemplate({ data, isPreview = false }: FloralTemplateProps)
               </div>
             </motion.div>
           </div>
+        </section>
+      );
+    },
+
+    rsvp: () => {
+      if (!data.settings.enableRsvp) return null;
+      return (
+        <section key="rsvp" className="py-14 md:py-20 px-6 bg-rose-50/30">
+          <RSVPSection invitationId={data.id} fields={data.settings.rsvpFields} />
         </section>
       );
     },

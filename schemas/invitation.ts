@@ -36,6 +36,7 @@ export const REORDERABLE_SECTIONS = [
   'ceremony',
   'gallery',
   'accounts',
+  'rsvp',
 ] as const;
 
 export type SectionId = typeof REORDERABLE_SECTIONS[number];
@@ -50,6 +51,7 @@ export const SECTION_LABELS: Record<SectionId, string> = {
   ceremony: '예식 정보',
   gallery: '갤러리',
   accounts: '계좌번호',
+  rsvp: '참석 여부',
 };
 
 // 순서 데이터 정합성 보장 (누락/중복/잘못된 값 방어)
@@ -124,12 +126,23 @@ export const GallerySchema = z.object({
   images: z.array(z.string().url()).default([]),
 });
 
+// RSVP 필드 설정
+export const RsvpFieldsSchema = z.object({
+  phone: z.boolean().default(true),        // 연락처
+  guestCount: z.boolean().default(true),   // 동행 인원
+  meal: z.boolean().default(true),         // 식사 옵션
+  message: z.boolean().default(true),      // 축하 메시지
+});
+
+export type RsvpFields = z.infer<typeof RsvpFieldsSchema>;
+
 // 설정
 export const SettingsSchema = z.object({
   showParents: z.boolean().default(true),
   showAccounts: z.boolean().default(true),
   showMap: z.boolean().default(true),
   enableRsvp: z.boolean().default(true),
+  rsvpFields: RsvpFieldsSchema.optional(),  // RSVP 필드별 on/off
   backgroundColor: z.string().optional(),
   fontFamily: z.string().optional(),
   sectionOrder: z.array(z.string()).optional(), // 섹션 표시 순서

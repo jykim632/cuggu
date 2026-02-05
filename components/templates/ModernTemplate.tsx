@@ -15,6 +15,7 @@ import {
 } from "@/lib/utils/date";
 import { GalleryLightbox } from "./GalleryLightbox";
 import { formatFamilyName } from "@/lib/utils/family-display";
+import { RSVPSection } from "@/components/rsvp/RSVPSection";
 
 interface ModernTemplateProps {
   data: Invitation;
@@ -374,6 +375,15 @@ export function ModernTemplate({ data, isPreview = false }: ModernTemplateProps)
               </div>
             </motion.div>
           </div>
+        </section>
+      );
+    },
+
+    rsvp: () => {
+      if (!data.settings.enableRsvp) return null;
+      return (
+        <section key="rsvp" className="py-16 md:py-24 px-8 md:px-12">
+          <RSVPSection invitationId={data.id} fields={data.settings.rsvpFields} />
         </section>
       );
     },

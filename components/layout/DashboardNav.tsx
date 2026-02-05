@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileHeart, Sparkles, Settings, LogOut, Home } from "lucide-react";
+import { FileHeart, Sparkles, Settings, LogOut, Home, Users } from "lucide-react";
 import { UserProfile } from "./UserProfile";
 
 const navItems = [
@@ -20,6 +20,11 @@ const navItems = [
     title: "AI 사진 생성",
     href: "/dashboard/ai-photos",
     icon: Sparkles,
+  },
+  {
+    title: "RSVP 관리",
+    href: "/dashboard/rsvp",
+    icon: Users,
   },
   {
     title: "설정",

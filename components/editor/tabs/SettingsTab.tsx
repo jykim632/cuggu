@@ -119,6 +119,7 @@ export function SettingsTab() {
     if (id === 'parents') return invitation.settings?.showParents !== false;
     if (id === 'accounts') return invitation.settings?.showAccounts !== false;
     if (id === 'gallery') return (invitation.gallery?.images?.length ?? 0) > 0;
+    if (id === 'rsvp') return invitation.settings?.enableRsvp !== false;
     return true;
   };
 
@@ -127,6 +128,7 @@ export function SettingsTab() {
     if (id === 'parents' && !isSectionActive(id)) return '숨김';
     if (id === 'accounts' && !isSectionActive(id)) return '숨김';
     if (id === 'gallery' && !isSectionActive(id)) return '사진 없음';
+    if (id === 'rsvp' && !isSectionActive(id)) return '비활성';
     return null;
   };
 
@@ -252,6 +254,102 @@ export function SettingsTab() {
             <p className="text-xs text-stone-500 mt-1.5">
               비밀번호는 4자리 숫자로 설정하세요
             </p>
+          </div>
+        )}
+      </div>
+
+      {/* RSVP 기능 */}
+      <div className="bg-white rounded-xl p-6 space-y-4 border border-stone-200">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-medium text-stone-700">참석 여부 (RSVP)</h3>
+            <p className="text-xs text-stone-500 mt-1">
+              하객이 참석 여부를 전송할 수 있습니다
+            </p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={invitation.settings?.enableRsvp !== false}
+              onChange={(e) => handleSettingsChange('enableRsvp', e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-stone-200 border border-stone-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-pink-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-500 peer-checked:border-pink-500"></div>
+          </label>
+        </div>
+
+        {/* RSVP 필드 설정 */}
+        {invitation.settings?.enableRsvp !== false && (
+          <div className="pt-4 border-t border-stone-100 space-y-3">
+            <p className="text-xs font-medium text-stone-500 mb-2">수집할 정보</p>
+
+            {/* 이름 - 필수 */}
+            <label className="flex items-center justify-between py-1.5">
+              <span className="text-sm text-stone-600">이름</span>
+              <span className="text-xs text-stone-400">필수</span>
+            </label>
+
+            {/* 연락처 */}
+            <label className="flex items-center justify-between py-1.5 cursor-pointer">
+              <span className="text-sm text-stone-600">연락처</span>
+              <input
+                type="checkbox"
+                checked={invitation.settings?.rsvpFields?.phone !== false}
+                onChange={(e) => handleSettingsChange('rsvpFields', {
+                  ...invitation.settings?.rsvpFields,
+                  phone: e.target.checked,
+                })}
+                className="w-4 h-4 text-pink-500 border-stone-300 rounded focus:ring-pink-200"
+              />
+            </label>
+
+            {/* 참석 여부 - 필수 */}
+            <label className="flex items-center justify-between py-1.5">
+              <span className="text-sm text-stone-600">참석 여부</span>
+              <span className="text-xs text-stone-400">필수</span>
+            </label>
+
+            {/* 동행 인원 */}
+            <label className="flex items-center justify-between py-1.5 cursor-pointer">
+              <span className="text-sm text-stone-600">동행 인원</span>
+              <input
+                type="checkbox"
+                checked={invitation.settings?.rsvpFields?.guestCount !== false}
+                onChange={(e) => handleSettingsChange('rsvpFields', {
+                  ...invitation.settings?.rsvpFields,
+                  guestCount: e.target.checked,
+                })}
+                className="w-4 h-4 text-pink-500 border-stone-300 rounded focus:ring-pink-200"
+              />
+            </label>
+
+            {/* 식사 */}
+            <label className="flex items-center justify-between py-1.5 cursor-pointer">
+              <span className="text-sm text-stone-600">식사 옵션</span>
+              <input
+                type="checkbox"
+                checked={invitation.settings?.rsvpFields?.meal !== false}
+                onChange={(e) => handleSettingsChange('rsvpFields', {
+                  ...invitation.settings?.rsvpFields,
+                  meal: e.target.checked,
+                })}
+                className="w-4 h-4 text-pink-500 border-stone-300 rounded focus:ring-pink-200"
+              />
+            </label>
+
+            {/* 축하 메시지 */}
+            <label className="flex items-center justify-between py-1.5 cursor-pointer">
+              <span className="text-sm text-stone-600">축하 메시지</span>
+              <input
+                type="checkbox"
+                checked={invitation.settings?.rsvpFields?.message !== false}
+                onChange={(e) => handleSettingsChange('rsvpFields', {
+                  ...invitation.settings?.rsvpFields,
+                  message: e.target.checked,
+                })}
+                className="w-4 h-4 text-pink-500 border-stone-300 rounded focus:ring-pink-200"
+              />
+            </label>
           </div>
         )}
       </div>

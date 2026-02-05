@@ -101,6 +101,7 @@ export function dbRecordToInvitation(row: DbInvitationRow): Invitation {
       showAccounts: ext.settings?.showAccounts ?? true,
       showMap: ext.settings?.showMap ?? true,
       enableRsvp: ext.settings?.enableRsvp ?? true,
+      rsvpFields: ext.settings?.rsvpFields,
       backgroundColor: ext.settings?.backgroundColor,
       fontFamily: ext.settings?.fontFamily,
       sectionOrder: ext.settings?.sectionOrder,

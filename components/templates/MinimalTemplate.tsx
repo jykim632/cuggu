@@ -15,6 +15,7 @@ import {
 } from "@/lib/utils/date";
 import { GalleryLightbox } from "./GalleryLightbox";
 import { formatFamilyName } from "@/lib/utils/family-display";
+import { RSVPSection } from "@/components/rsvp/RSVPSection";
 
 interface MinimalTemplateProps {
   data: Invitation;
@@ -384,6 +385,15 @@ export function MinimalTemplate({ data, isPreview = false }: MinimalTemplateProp
               </div>
             </motion.div>
           </div>
+        </section>
+      );
+    },
+
+    rsvp: () => {
+      if (!data.settings.enableRsvp) return null;
+      return (
+        <section key="rsvp" className="py-12 md:py-16 px-6">
+          <RSVPSection invitationId={data.id} fields={data.settings.rsvpFields} />
         </section>
       );
     },

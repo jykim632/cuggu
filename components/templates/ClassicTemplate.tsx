@@ -17,6 +17,7 @@ import { GalleryLightbox } from "./GalleryLightbox";
 import { MapSection } from "./MapSection";
 import { NavigationButtons } from "./NavigationButtons";
 import { formatFamilyName } from "@/lib/utils/family-display";
+import { RSVPSection } from "@/components/rsvp/RSVPSection";
 
 interface ClassicTemplateProps {
   data: Invitation;
@@ -440,6 +441,15 @@ export function ClassicTemplate({ data, isPreview = false }: ClassicTemplateProp
               </div>
             </motion.div>
           </div>
+        </section>
+      );
+    },
+
+    rsvp: () => {
+      if (!data.settings.enableRsvp) return null;
+      return (
+        <section key="rsvp" className="py-12 md:py-20 px-6 bg-amber-50/30">
+          <RSVPSection invitationId={data.id} fields={data.settings.rsvpFields} />
         </section>
       );
     },
