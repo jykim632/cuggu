@@ -100,8 +100,8 @@ export function GalleryTab() {
     <div className="space-y-6">
       {/* 헤더 */}
       <div>
-        <h2 className="text-xl font-bold text-slate-900 mb-1">갤러리</h2>
-        <p className="text-sm text-slate-500">
+        <h2 className="text-xl font-semibold text-stone-900 tracking-tight mb-1">갤러리</h2>
+        <p className="text-sm text-stone-500">
           청첩장에 담을 사진을 업로드하세요
         </p>
       </div>
@@ -115,31 +115,31 @@ export function GalleryTab() {
       )}
 
       {/* 업로드 버튼 */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg shadow-pink-100/50">
+      <div className="bg-white rounded-xl p-6 border border-stone-200">
         <label
-          className={`flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-xl transition-all group bg-gradient-to-br from-white to-pink-50/20 ${
+          className={`flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-xl transition-colors group ${
             uploading
-              ? 'border-pink-300 bg-pink-50 cursor-wait'
-              : 'border-pink-200/50 cursor-pointer hover:border-pink-400 hover:bg-pink-50'
+              ? 'border-stone-300 bg-stone-50 cursor-wait'
+              : 'bg-white border-stone-300 cursor-pointer hover:border-pink-300 hover:bg-pink-50/30'
           }`}
         >
           <div className="flex flex-col items-center justify-center">
             {uploading ? (
               <>
-                <Loader2 className="w-8 h-8 text-pink-500 mb-2 animate-spin" />
-                <p className="text-sm text-pink-600 font-medium mb-1">
+                <Loader2 className="w-8 h-8 text-stone-500 mb-2 animate-spin" />
+                <p className="text-sm text-stone-600 font-medium mb-1">
                   업로드 중...
                 </p>
               </>
             ) : (
               <>
-                <Upload className="w-8 h-8 text-slate-400 group-hover:text-pink-500 mb-2 transition-colors" />
-                <p className="text-sm text-slate-700 font-medium mb-1">
+                <Upload className="w-8 h-8 text-stone-400 group-hover:text-pink-400 mb-2 transition-colors" />
+                <p className="text-sm text-stone-700 font-medium mb-1">
                   클릭하여 사진 업로드
                 </p>
               </>
             )}
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-stone-500">
               {images.length}/{limit}장 ・ 최대 10MB/장
             </p>
           </div>
@@ -156,15 +156,15 @@ export function GalleryTab() {
 
       {/* 이미지 그리드 */}
       {images.length > 0 && (
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg shadow-pink-100/50">
-          <h3 className="text-sm font-semibold text-slate-700 mb-4">
+        <div className="bg-white rounded-xl p-6 border border-stone-200">
+          <h3 className="text-sm font-medium text-stone-700 mb-4">
             업로드된 사진 ({images.length}장)
           </h3>
           <div className="grid grid-cols-3 gap-3">
             {images.map((image: string, index: number) => (
               <div
                 key={`${image}-${index}`}
-                className="relative aspect-square bg-slate-100 rounded-lg overflow-hidden group"
+                className="relative aspect-square bg-stone-100 rounded-lg overflow-hidden group"
               >
                 <img
                   src={image}
@@ -184,29 +184,26 @@ export function GalleryTab() {
       )}
 
       {/* AI 생성 사진 안내 */}
-      <div className="relative group">
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-500 to-rose-500 rounded-xl opacity-50 group-hover:opacity-75 blur transition-opacity" />
-        <div className="relative bg-white rounded-xl p-5 border border-slate-200">
+      <div className="bg-pink-50/30 rounded-xl p-5 border border-stone-200">
           <div className="flex items-start gap-4">
-            <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-pink-500 to-rose-500 rounded-lg flex items-center justify-center">
+            <div className="flex-shrink-0 w-10 h-10 bg-pink-500 rounded-lg flex items-center justify-center">
               <Upload className="w-5 h-5 text-white" />
             </div>
 
             <div className="flex-1">
-              <h4 className="font-semibold text-slate-900 mb-1 text-sm">
+              <h4 className="font-semibold text-stone-900 mb-1 text-sm">
                 AI 웨딩 사진 생성
               </h4>
-              <p className="text-xs text-slate-600 mb-3">
+              <p className="text-xs text-stone-600 mb-3">
                 증명 사진만 있으면 AI가 웨딩 화보를 만들어드립니다
               </p>
 
-              <button className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5">
+              <button className="px-3 py-1.5 bg-stone-900 hover:bg-stone-800 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5">
                 <Upload className="w-3.5 h-3.5" />
                 AI 사진 생성하기
               </button>
             </div>
           </div>
-        </div>
       </div>
     </div>
   );

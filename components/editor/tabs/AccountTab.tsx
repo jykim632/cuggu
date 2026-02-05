@@ -24,7 +24,7 @@ function AccountForm({
     <div className="space-y-3">
       {showRemove && (
         <div className="flex justify-between items-center">
-          <span className="text-xs text-slate-500">{placeholder}</span>
+          <span className="text-xs text-stone-500">{placeholder}</span>
           <button
             type="button"
             onClick={onRemove}
@@ -36,13 +36,13 @@ function AccountForm({
       )}
 
       <div>
-        <label className="block text-xs font-semibold text-slate-700 mb-2">
+        <label className="block text-sm font-medium text-stone-600 mb-2">
           은행
         </label>
         <select
           value={account?.bank || ''}
           onChange={(e) => onChange('bank', e.target.value)}
-          className="w-full px-4 py-3 text-sm bg-gradient-to-br from-white to-pink-50/20 border border-pink-200/50 rounded-xl focus:ring-2 focus:ring-pink-400 focus:border-pink-300 focus:bg-white transition-all duration-200"
+          className="w-full px-4 py-3 text-sm bg-white border border-stone-200 rounded-lg focus:ring-1 focus:ring-pink-300 focus:border-pink-300 transition-colors"
         >
           <option value="">선택하세요</option>
           {banks.map((bank) => (
@@ -54,7 +54,7 @@ function AccountForm({
       </div>
 
       <div>
-        <label className="block text-xs font-semibold text-slate-700 mb-2">
+        <label className="block text-sm font-medium text-stone-600 mb-2">
           계좌번호
         </label>
         <input
@@ -62,12 +62,12 @@ function AccountForm({
           value={account?.accountNumber || ''}
           onChange={(e) => onChange('accountNumber', e.target.value)}
           placeholder="1234-5678-9012"
-          className="w-full px-4 py-3 text-sm bg-gradient-to-br from-white to-pink-50/20 border border-pink-200/50 rounded-xl focus:ring-2 focus:ring-pink-400 focus:border-pink-300 focus:bg-white transition-all duration-200 placeholder:text-slate-400"
+          className="w-full px-4 py-3 text-sm bg-white border border-stone-200 rounded-lg focus:ring-1 focus:ring-pink-300 focus:border-pink-300 transition-colors placeholder:text-stone-400"
         />
       </div>
 
       <div>
-        <label className="block text-xs font-semibold text-slate-700 mb-2">
+        <label className="block text-sm font-medium text-stone-600 mb-2">
           예금주
         </label>
         <input
@@ -75,7 +75,7 @@ function AccountForm({
           value={account?.accountHolder || ''}
           onChange={(e) => onChange('accountHolder', e.target.value)}
           placeholder={placeholder || '홍길동'}
-          className="w-full px-4 py-3 text-sm bg-gradient-to-br from-white to-pink-50/20 border border-pink-200/50 rounded-xl focus:ring-2 focus:ring-pink-400 focus:border-pink-300 focus:bg-white transition-all duration-200 placeholder:text-slate-400"
+          className="w-full px-4 py-3 text-sm bg-white border border-stone-200 rounded-lg focus:ring-1 focus:ring-pink-300 focus:border-pink-300 transition-colors placeholder:text-stone-400"
         />
       </div>
     </div>
@@ -204,17 +204,17 @@ export function AccountTab() {
     <div className="space-y-6">
       {/* 헤더 */}
       <div>
-        <h2 className="text-xl font-bold text-slate-900 mb-1">계좌 정보</h2>
-        <p className="text-sm text-slate-500">축의금을 받을 계좌를 입력하세요</p>
+        <h2 className="text-xl font-semibold text-stone-900 tracking-tight mb-1">계좌 정보</h2>
+        <p className="text-sm text-stone-500">축의금을 받을 계좌를 입력하세요</p>
       </div>
 
       {/* 신랑측 */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 space-y-6 shadow-lg shadow-pink-100/50">
-        <h3 className="text-sm font-semibold text-slate-700">신랑측 계좌</h3>
+      <div className="bg-white rounded-xl p-6 space-y-6 border border-stone-200">
+        <h3 className="text-sm font-medium text-stone-700">신랑측 계좌</h3>
 
         {/* 본인 계좌 */}
         <div>
-          <p className="text-xs font-medium text-slate-600 mb-3">본인</p>
+          <p className="text-xs font-medium text-stone-600 mb-3">본인</p>
           <AccountForm
             account={invitation.groom?.account}
             onChange={handleGroomAccountChange}
@@ -227,7 +227,7 @@ export function AccountTab() {
         <button
           type="button"
           onClick={() => setShowGroomParentAccounts(!showGroomParentAccounts)}
-          className="text-sm text-pink-600 hover:text-pink-700 font-medium transition-colors"
+          className="text-sm text-pink-500 hover:text-pink-600 font-medium transition-colors"
         >
           {showGroomParentAccounts ? '▼' : '▶'} 부모님 계좌 관리
         </button>
@@ -238,13 +238,13 @@ export function AccountTab() {
             {/* 아버지 계좌 */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-slate-700">
+                <span className="text-sm font-medium text-stone-600">
                   아버지 ({invitation.groom?.fatherName || '이름 미입력'})
                 </span>
                 <button
                   type="button"
                   onClick={() => handleAddParentAccount('groom', 'father')}
-                  className="flex items-center gap-1 text-xs text-pink-600 hover:text-pink-700 font-medium transition-colors"
+                  className="flex items-center gap-1 text-xs text-pink-500 hover:text-pink-600 font-medium transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   계좌 추가
@@ -280,13 +280,13 @@ export function AccountTab() {
             {/* 어머니 계좌 */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-slate-700">
+                <span className="text-sm font-medium text-stone-600">
                   어머니 ({invitation.groom?.motherName || '이름 미입력'})
                 </span>
                 <button
                   type="button"
                   onClick={() => handleAddParentAccount('groom', 'mother')}
-                  className="flex items-center gap-1 text-xs text-pink-600 hover:text-pink-700 font-medium transition-colors"
+                  className="flex items-center gap-1 text-xs text-pink-500 hover:text-pink-600 font-medium transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   계좌 추가
@@ -323,12 +323,12 @@ export function AccountTab() {
       </div>
 
       {/* 신부측 */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 space-y-6 shadow-lg shadow-pink-100/50">
-        <h3 className="text-sm font-semibold text-slate-700">신부측 계좌</h3>
+      <div className="bg-white rounded-xl p-6 space-y-6 border border-stone-200">
+        <h3 className="text-sm font-medium text-stone-700">신부측 계좌</h3>
 
         {/* 본인 계좌 */}
         <div>
-          <p className="text-xs font-medium text-slate-600 mb-3">본인</p>
+          <p className="text-xs font-medium text-stone-600 mb-3">본인</p>
           <AccountForm
             account={invitation.bride?.account}
             onChange={handleBrideAccountChange}
@@ -341,7 +341,7 @@ export function AccountTab() {
         <button
           type="button"
           onClick={() => setShowBrideParentAccounts(!showBrideParentAccounts)}
-          className="text-sm text-pink-600 hover:text-pink-700 font-medium transition-colors"
+          className="text-sm text-pink-500 hover:text-pink-600 font-medium transition-colors"
         >
           {showBrideParentAccounts ? '▼' : '▶'} 부모님 계좌 관리
         </button>
@@ -352,13 +352,13 @@ export function AccountTab() {
             {/* 아버지 계좌 */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-slate-700">
+                <span className="text-sm font-medium text-stone-600">
                   아버지 ({invitation.bride?.fatherName || '이름 미입력'})
                 </span>
                 <button
                   type="button"
                   onClick={() => handleAddParentAccount('bride', 'father')}
-                  className="flex items-center gap-1 text-xs text-pink-600 hover:text-pink-700 font-medium transition-colors"
+                  className="flex items-center gap-1 text-xs text-pink-500 hover:text-pink-600 font-medium transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   계좌 추가
@@ -394,13 +394,13 @@ export function AccountTab() {
             {/* 어머니 계좌 */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-slate-700">
+                <span className="text-sm font-medium text-stone-600">
                   어머니 ({invitation.bride?.motherName || '이름 미입력'})
                 </span>
                 <button
                   type="button"
                   onClick={() => handleAddParentAccount('bride', 'mother')}
-                  className="flex items-center gap-1 text-xs text-pink-600 hover:text-pink-700 font-medium transition-colors"
+                  className="flex items-center gap-1 text-xs text-pink-500 hover:text-pink-600 font-medium transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   계좌 추가

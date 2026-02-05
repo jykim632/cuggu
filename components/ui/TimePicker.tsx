@@ -80,7 +80,7 @@ export function TimePicker({
 
       {/* Time Selector */}
       <div
-        className="fixed z-50 bg-white rounded-2xl shadow-2xl border border-pink-100 p-4 w-64"
+        className="fixed z-50 bg-white rounded-xl shadow-xl border border-stone-200 p-4 w-64"
         style={{
           top: `${position.top}px`,
           left: `${position.left}px`
@@ -89,7 +89,7 @@ export function TimePicker({
             <div className="grid grid-cols-2 gap-3">
               {/* 시간 선택 */}
               <div>
-                <div className="text-xs font-semibold text-slate-600 mb-2">시간</div>
+                <div className="text-xs font-semibold text-stone-600 mb-2">시간</div>
                 <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
                   {hours.map((hour) => (
                     <button
@@ -98,8 +98,8 @@ export function TimePicker({
                       onClick={() => handleHourSelect(hour)}
                       className={`w-full px-3 py-2 text-sm rounded-lg text-left transition-colors ${
                         hour === tempHour
-                          ? 'bg-pink-600 text-white font-medium'
-                          : 'hover:bg-pink-50 text-slate-700'
+                          ? 'bg-pink-500 text-white font-medium'
+                          : 'hover:bg-pink-50 text-stone-700'
                       }`}
                     >
                       {formatTime(hour, 0).split(' ')[0]} {formatTime(hour, 0).split(' ')[1]}
@@ -110,7 +110,7 @@ export function TimePicker({
 
               {/* 분 선택 */}
               <div>
-                <div className="text-xs font-semibold text-slate-600 mb-2">분</div>
+                <div className="text-xs font-semibold text-stone-600 mb-2">분</div>
                 <div className="space-y-1">
                   {minutes.map((minute) => (
                     <button
@@ -119,8 +119,8 @@ export function TimePicker({
                       onClick={() => handleMinuteSelect(minute)}
                       className={`w-full px-3 py-2 text-sm rounded-lg text-left transition-colors ${
                         minute === tempMinute
-                          ? 'bg-pink-600 text-white font-medium'
-                          : 'hover:bg-pink-50 text-slate-700'
+                          ? 'bg-pink-500 text-white font-medium'
+                          : 'hover:bg-pink-50 text-stone-700'
                       }`}
                     >
                       {minute === 0 ? '정각' : `${minute}분`}
@@ -140,12 +140,12 @@ export function TimePicker({
         ref={buttonRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-3 text-sm bg-gradient-to-br from-white to-pink-50/20 border border-pink-200/50 rounded-xl focus:ring-2 focus:ring-pink-400 focus:border-pink-300 focus:bg-white transition-all duration-200 text-left flex items-center justify-between"
+        className="w-full px-4 py-3 text-sm bg-white border border-stone-200 rounded-lg focus:ring-1 focus:ring-pink-300 focus:border-pink-300 transition-colors text-left flex items-center justify-between"
       >
-        <span className={value ? 'text-slate-900' : 'text-slate-400'}>
+        <span className={value ? 'text-stone-900' : 'text-stone-400'}>
           {value ? formatTime(parsedHour, parsedMinute) : placeholder}
         </span>
-        <Clock className="w-4 h-4 text-slate-400" />
+        <Clock className="w-4 h-4 text-stone-400" />
       </button>
 
       {/* Portal Dropdown */}

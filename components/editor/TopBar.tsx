@@ -85,19 +85,19 @@ export function TopBar({ invitation, isSaving, lastSaved, onUpdateInvitation }: 
   };
 
   return (
-    <header className="h-14 bg-gradient-to-r from-pink-50 via-white to-pink-50 flex items-center justify-between px-6 flex-shrink-0 shadow-sm">
+    <header className="h-14 bg-white border-b border-stone-200 flex items-center justify-between px-6 flex-shrink-0">
       {/* 좌측: 로고 + 제목 */}
       <div className="flex items-center gap-4">
         <Link
           href="/dashboard"
-          className="text-lg font-bold text-slate-900 hover:text-pink-600 transition-colors"
+          className="text-lg font-bold text-stone-900 hover:text-stone-600 transition-colors"
         >
           Cuggu
         </Link>
 
-        <div className="h-5 w-px bg-slate-200" />
+        <div className="h-5 w-px bg-stone-200" />
 
-        <div className="text-sm text-slate-600">
+        <div className="text-sm text-stone-600">
           {getTitle()}
         </div>
 
@@ -112,7 +112,7 @@ export function TopBar({ invitation, isSaving, lastSaved, onUpdateInvitation }: 
       {/* 우측: 상태 + 액션 버튼 */}
       <div className="flex items-center gap-2">
         {/* 저장 상태 */}
-        <div className="text-xs text-slate-500 mr-2">
+        <div className="text-xs text-stone-500 mr-2">
           {isSaving ? (
             <span className="flex items-center gap-1.5">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -129,7 +129,7 @@ export function TopBar({ invitation, isSaving, lastSaved, onUpdateInvitation }: 
         {/* 대시보드로 */}
         <Link
           href="/dashboard"
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-stone-600 hover:bg-stone-100 rounded-lg transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           대시보드
@@ -138,7 +138,7 @@ export function TopBar({ invitation, isSaving, lastSaved, onUpdateInvitation }: 
         {/* 미리보기 */}
         <button
           onClick={() => window.open(`/inv/${invitation.id}`, '_blank')}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-stone-600 hover:bg-stone-100 rounded-lg transition-colors"
         >
           <Eye className="w-4 h-4" />
           미리보기
@@ -148,7 +148,7 @@ export function TopBar({ invitation, isSaving, lastSaved, onUpdateInvitation }: 
         {isPublished ? (
           <button
             onClick={handleShare}
-            className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium text-white bg-pink-600 hover:bg-pink-700 rounded-lg transition-colors shadow-sm"
+            className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium text-white bg-pink-500 hover:bg-pink-600 rounded-lg transition-colors"
           >
             <Share2 className="w-4 h-4" />
             공유
@@ -157,7 +157,7 @@ export function TopBar({ invitation, isSaving, lastSaved, onUpdateInvitation }: 
           <button
             onClick={handlePublish}
             disabled={isPublishing}
-            className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium text-white bg-pink-600 hover:bg-pink-700 disabled:bg-pink-300 rounded-lg transition-colors shadow-sm"
+            className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium text-white bg-pink-500 hover:bg-pink-600 disabled:bg-pink-200 rounded-lg transition-colors"
           >
             {isPublishing ? (
               <Loader2 className="w-4 h-4 animate-spin" />

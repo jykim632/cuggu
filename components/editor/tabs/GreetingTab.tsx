@@ -30,14 +30,14 @@ export function GreetingTab() {
     <div className="space-y-6">
       {/* 헤더 */}
       <div>
-        <h2 className="text-xl font-bold text-slate-900 mb-1">인사말</h2>
-        <p className="text-sm text-slate-500">청첩장에 담을 인사말을 작성하세요</p>
+        <h2 className="text-xl font-semibold text-stone-900 tracking-tight mb-1">인사말</h2>
+        <p className="text-sm text-stone-500">청첩장에 담을 인사말을 작성하세요</p>
       </div>
 
       {/* 인사말 입력 */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 space-y-4 shadow-lg shadow-pink-100/50">
+      <div className="bg-white rounded-xl p-6 space-y-4 border border-stone-200">
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-2">
+          <label className="block text-sm font-medium text-stone-600 mb-2">
             인사말
           </label>
           <textarea
@@ -45,25 +45,25 @@ export function GreetingTab() {
             onChange={(e) => handleGreetingChange(e.target.value)}
             placeholder="인사말을 입력하세요"
             rows={8}
-            className="w-full px-4 py-3 text-sm bg-gradient-to-br from-white to-pink-50/20 border border-pink-200/50 rounded-xl focus:ring-2 focus:ring-pink-400 focus:border-pink-300 focus:bg-white transition-all duration-200 resize-none placeholder:text-slate-400"
+            className="w-full px-4 py-3 text-sm bg-white border border-stone-200 rounded-lg focus:ring-1 focus:ring-pink-300 focus:border-pink-300 transition-colors resize-none placeholder:text-stone-400"
           />
-          <p className="text-xs text-slate-500 mt-1.5">
+          <p className="text-xs text-stone-500 mt-1.5">
             {invitation.content?.greeting?.length || 0} / 500자
           </p>
         </div>
       </div>
 
       {/* 예시 인사말 */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 space-y-4 shadow-lg shadow-pink-100/50">
-        <h3 className="text-sm font-semibold text-slate-700 mb-3">예시 인사말</h3>
+      <div className="bg-white rounded-xl p-6 space-y-4 border border-stone-200">
+        <h3 className="text-sm font-medium text-stone-700 mb-3">예시 인사말</h3>
         <div className="space-y-2.5">
           {exampleGreetings.map((greeting, index) => (
             <button
               key={index}
               onClick={() => handleGreetingChange(greeting)}
-              className="w-full p-3.5 text-left border border-slate-200 rounded-lg hover:border-pink-300 hover:bg-pink-50 transition-all"
+              className="w-full p-3.5 text-left border border-stone-200 rounded-lg hover:border-pink-300 hover:bg-pink-50/50 transition-colors"
             >
-              <p className="text-sm text-slate-700 whitespace-pre-line leading-relaxed">
+              <p className="text-sm text-stone-700 whitespace-pre-line leading-relaxed">
                 {greeting}
               </p>
             </button>

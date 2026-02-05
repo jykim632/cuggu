@@ -45,7 +45,7 @@ export function EditorPanel({ activeTab, invitation }: EditorPanelProps) {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-white">
+    <div className="flex-1 overflow-y-auto bg-stone-50/50">
       <div className="max-w-3xl mx-auto px-8 py-6">
         {renderTab()}
       </div>

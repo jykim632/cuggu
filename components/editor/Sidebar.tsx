@@ -87,7 +87,7 @@ export function Sidebar({ activeTab, invitation }: SidebarProps) {
   };
 
   return (
-    <aside className="w-16 bg-gradient-to-b from-pink-50 via-white to-pink-50/50 flex-shrink-0 flex flex-col shadow-sm">
+    <aside className="w-16 bg-stone-50 border-r border-stone-200 flex-shrink-0 flex flex-col">
       <nav className="flex-1 py-4">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
@@ -103,12 +103,12 @@ export function Sidebar({ activeTab, invitation }: SidebarProps) {
               title={tab.label}
               className={`
                 relative w-full flex items-center justify-center h-14 transition-all group
-                ${isActive ? 'text-pink-600 bg-pink-100' : 'text-slate-500 hover:text-pink-600 hover:bg-pink-50'}
+                ${isActive ? 'text-stone-900 bg-white' : 'text-stone-400 hover:text-stone-600 hover:bg-stone-100'}
               `}
             >
               {/* 활성 탭 왼쪽 accent bar */}
               {isActive && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-pink-600 rounded-r-full" />
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-8 bg-pink-400 rounded-r-full" />
               )}
 
               <div className="relative">
@@ -128,7 +128,7 @@ export function Sidebar({ activeTab, invitation }: SidebarProps) {
               </div>
 
               {/* 호버 시 툴팁 */}
-              <div className="absolute left-full ml-2 px-2 py-1 bg-slate-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+              <div className="absolute left-full ml-2 px-2 py-1 bg-stone-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
                 {tab.label}
               </div>
             </button>

@@ -79,17 +79,17 @@ export function VenueTab() {
     <div className="space-y-6">
       {/* 헤더 */}
       <div>
-        <h2 className="text-xl font-bold text-slate-900 mb-1">예식 정보</h2>
-        <p className="text-sm text-slate-500">결혼식 날짜와 장소를 입력하세요</p>
+        <h2 className="text-xl font-semibold text-stone-900 tracking-tight mb-1">예식 정보</h2>
+        <p className="text-sm text-stone-500">결혼식 날짜와 장소를 입력하세요</p>
       </div>
 
       {/* 날짜/시간 */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 space-y-4 shadow-lg shadow-pink-100/50">
-        <h3 className="text-sm font-semibold text-slate-700 mb-3">예식 일시</h3>
+      <div className="bg-white rounded-xl p-6 space-y-4 border border-stone-200">
+        <h3 className="text-sm font-medium text-stone-700 mb-3">예식 일시</h3>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-stone-600 mb-2">
               날짜 <span className="text-red-500">*</span>
             </label>
             <DatePicker
@@ -100,7 +100,7 @@ export function VenueTab() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-stone-600 mb-2">
               시간 <span className="text-red-500">*</span>
             </label>
             <TimePicker
@@ -113,11 +113,11 @@ export function VenueTab() {
       </div>
 
       {/* 예식장 정보 */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 space-y-4 shadow-lg shadow-pink-100/50">
-        <h3 className="text-sm font-semibold text-slate-700 mb-3">예식장</h3>
+      <div className="bg-white rounded-xl p-6 space-y-4 border border-stone-200">
+        <h3 className="text-sm font-medium text-stone-700 mb-3">예식장</h3>
 
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-2">
+          <label className="block text-sm font-medium text-stone-600 mb-2">
             예식장 이름 <span className="text-red-500">*</span>
           </label>
           <input
@@ -125,12 +125,12 @@ export function VenueTab() {
             value={invitation.wedding?.venue?.name || ''}
             onChange={(e) => handleVenueChange('name', e.target.value)}
             placeholder="서울웨딩홀"
-            className="w-full px-4 py-3 text-sm bg-gradient-to-br from-white to-pink-50/20 border border-pink-200/50 rounded-xl focus:ring-2 focus:ring-pink-400 focus:border-pink-300 focus:bg-white transition-all duration-200 placeholder:text-slate-400"
+            className="w-full px-4 py-3 text-sm bg-white border border-stone-200 rounded-lg focus:ring-1 focus:ring-pink-300 focus:border-pink-300 transition-colors placeholder:text-stone-400"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-2">
+          <label className="block text-sm font-medium text-stone-600 mb-2">
             홀 이름
           </label>
           <input
@@ -138,12 +138,12 @@ export function VenueTab() {
             value={invitation.wedding?.venue?.hall || ''}
             onChange={(e) => handleVenueChange('hall', e.target.value)}
             placeholder="3층 그랜드홀"
-            className="w-full px-4 py-3 text-sm bg-gradient-to-br from-white to-pink-50/20 border border-pink-200/50 rounded-xl focus:ring-2 focus:ring-pink-400 focus:border-pink-300 focus:bg-white transition-all duration-200 placeholder:text-slate-400"
+            className="w-full px-4 py-3 text-sm bg-white border border-stone-200 rounded-lg focus:ring-1 focus:ring-pink-300 focus:border-pink-300 transition-colors placeholder:text-stone-400"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-2">
+          <label className="block text-sm font-medium text-stone-600 mb-2">
             주소 <span className="text-red-500">*</span>
           </label>
           <input
@@ -151,12 +151,12 @@ export function VenueTab() {
             value={invitation.wedding?.venue?.address || ''}
             onChange={(e) => handleVenueChange('address', e.target.value)}
             placeholder="서울시 강남구 테헤란로 123"
-            className="w-full px-4 py-3 text-sm bg-gradient-to-br from-white to-pink-50/20 border border-pink-200/50 rounded-xl focus:ring-2 focus:ring-pink-400 focus:border-pink-300 focus:bg-white transition-all duration-200 placeholder:text-slate-400"
+            className="w-full px-4 py-3 text-sm bg-white border border-stone-200 rounded-lg focus:ring-1 focus:ring-pink-300 focus:border-pink-300 transition-colors placeholder:text-stone-400"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-2">
+          <label className="block text-sm font-medium text-stone-600 mb-2">
             교통편 안내
           </label>
           <textarea
@@ -164,7 +164,7 @@ export function VenueTab() {
             onChange={(e) => handleVenueChange('directions', e.target.value)}
             placeholder="지하철: 강남역 3번 출구 도보 5분&#10;버스: 146, 301, 402 강남역 하차"
             rows={4}
-            className="w-full px-4 py-3 text-sm bg-gradient-to-br from-white to-pink-50/20 border border-pink-200/50 rounded-xl focus:ring-2 focus:ring-pink-400 focus:border-pink-300 focus:bg-white transition-all duration-200 resize-none placeholder:text-slate-400"
+            className="w-full px-4 py-3 text-sm bg-white border border-stone-200 rounded-lg focus:ring-1 focus:ring-pink-300 focus:border-pink-300 transition-colors resize-none placeholder:text-stone-400"
           />
         </div>
       </div>
