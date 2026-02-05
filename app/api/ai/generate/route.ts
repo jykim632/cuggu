@@ -231,11 +231,15 @@ export async function POST(request: NextRequest) {
       })
       .returning();
 
-    // 14. 잔여 크레딧 조회
-    const updatedUser = await db.query.users.findFirst({
-      where: eq(users.id, user.id),
-      columns: { aiCredits: true },
-    });
+    // 14. 잔여 크레딧 조회 (개발 모드는 999)
+    let remainingCredits = 999;
+    if (!isDev) {
+      const updatedUser = await db.query.users.findFirst({
+        where: eq(users.id, user.id),
+        columns: { aiCredits: true },
+      });
+      remainingCredits = updatedUser?.aiCredits ?? 0;
+    }
 
     // 15. 응답
     return NextResponse.json({
@@ -245,7 +249,7 @@ export async function POST(request: NextRequest) {
         originalUrl: generation.originalUrl,
         generatedUrls: generation.generatedUrls,
         style: generation.style,
-        remainingCredits: updatedUser?.aiCredits ?? 0,
+        remainingCredits,
       },
     });
   } catch (error) {

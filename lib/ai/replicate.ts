@@ -152,40 +152,134 @@ export async function generateWeddingPhotos(
     }
   };
 
-  // 4장 생성 (병렬 실행)
-  const predictions = await Promise.all(
-    Array.from({ length: AI_CONFIG.BATCH_SIZE }, (_, i) =>
-      replicate.predictions.create({
-        model: model.replicateModel,
-        input: getModelInput(i) as any,
-      })
-    )
-  );
+  // 4장 순차 생성
+  const urls: string[] = [];
+  const predictionIds: string[] = [];
 
-  // 모든 prediction 완료 대기 (병렬)
-  const completed = await Promise.all(
-    predictions.map((prediction) => replicate.wait(prediction))
-  );
+  for (let i = 0; i < AI_CONFIG.BATCH_SIZE; i++) {
+    const prediction = await replicate.predictions.create({
+      model: model.replicateModel,
+      input: getModelInput(i) as any,
+    });
 
-  // URL 추출
-  const urls = completed.map((result) => {
-    const output = result.output as string;
+    predictionIds.push(prediction.id);
+
+    // 완료 대기
+    const completed = await replicate.wait(prediction);
+    const output = completed.output as string;
+
     if (typeof output !== 'string') {
       throw new Error(
         `Unexpected Replicate output format: expected string, got ${typeof output}`
       );
     }
-    return output;
-  });
 
-  const predictionIds = predictions.map((p) => p.id);
+    urls.push(output);
+  }
 
   // 비용 계산 (모델별)
   const cost = AI_CONFIG.BATCH_SIZE * model.costPerImage;
 
   return {
     urls,
-    replicateId: predictionIds[0], // 첫 번째 prediction ID 사용
+    replicateId: predictionIds[0],
+    cost,
+  };
+}
+
+/**
+ * 스트리밍 방식 웨딩 사진 생성 (1장씩 콜백)
+ */
+export async function generateWeddingPhotosStream(
+  imageUrl: string,
+  style: AIStyle,
+  role: 'GROOM' | 'BRIDE',
+  onImageGenerated: (index: number, url: string) => void,
+  modelId?: string
+): Promise<{
+  urls: string[];
+  replicateId: string;
+  cost: number;
+}> {
+  const selectedModelId = modelId || DEFAULT_MODEL;
+  const model = Object.values(AI_MODELS).find((m) => m.id === selectedModelId);
+
+  if (!model) {
+    throw new Error(`Unknown model: ${selectedModelId}`);
+  }
+
+  const basePrompt = STYLE_PROMPTS[style];
+  const genderPrompt =
+    role === 'GROOM'
+      ? 'handsome Korean groom in elegant black tuxedo and bow tie'
+      : 'beautiful Korean bride in white wedding dress';
+
+  const prompt = `${genderPrompt}, ${basePrompt}`;
+
+  // 모델별 input 파라미터 구성
+  const getModelInput = (i: number) => {
+    const baseInput = {
+      prompt: `${prompt}, keeping the exact same face, identical facial features, preserve the person's face from the reference image, variation ${i + 1}`,
+      image: imageUrl,
+    };
+
+    switch (model.id) {
+      case 'flux-pro':
+      case 'flux-dev':
+        return {
+          ...baseInput,
+          aspect_ratio: '3:4',
+          output_format: 'png',
+          output_quality: 90,
+          prompt_strength: 0.85,
+        };
+      case 'photomaker':
+        return {
+          ...baseInput,
+          num_steps: 20,
+          style_strength_ratio: 20,
+          input_image: imageUrl,
+          style_name: 'Photographic (Default)',
+        };
+      default:
+        return {
+          ...baseInput,
+          output_format: 'png',
+        };
+    }
+  };
+
+  const urls: string[] = [];
+  const predictionIds: string[] = [];
+
+  for (let i = 0; i < AI_CONFIG.BATCH_SIZE; i++) {
+    const prediction = await replicate.predictions.create({
+      model: model.replicateModel,
+      input: getModelInput(i) as any,
+    });
+
+    predictionIds.push(prediction.id);
+
+    const completed = await replicate.wait(prediction);
+    const output = completed.output as string;
+
+    if (typeof output !== 'string') {
+      throw new Error(
+        `Unexpected Replicate output format: expected string, got ${typeof output}`
+      );
+    }
+
+    urls.push(output);
+
+    // 콜백으로 알림
+    onImageGenerated(i, output);
+  }
+
+  const cost = AI_CONFIG.BATCH_SIZE * model.costPerImage;
+
+  return {
+    urls,
+    replicateId: predictionIds[0],
     cost,
   };
 }

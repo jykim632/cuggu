@@ -4,6 +4,8 @@ import { db } from '@/db';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
+const IS_DEV = process.env.NODE_ENV === 'development';
+
 /**
  * 사용자의 AI 크레딧 조회
  *
@@ -14,6 +16,14 @@ export async function GET() {
 
   if (!session?.user?.email) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // 개발 모드: 무제한 크레딧
+  if (IS_DEV) {
+    return NextResponse.json({
+      success: true,
+      credits: 999,
+    });
   }
 
   const user = await db.query.users.findFirst({
