@@ -44,6 +44,8 @@ export default function InvitationEditorPage() {
         const result = await response.json();
 
         if (result.success && result.data) {
+          console.log('[Editor] loaded invitation:', result.data);
+          console.log('[Editor] venue:', result.data.wedding?.venue);
           setInvitation(result.data);
         }
       } catch (error) {

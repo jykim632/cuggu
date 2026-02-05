@@ -10,6 +10,8 @@ import {
   formatWeddingDateTime,
 } from "@/lib/utils/date";
 import { GalleryLightbox } from "./GalleryLightbox";
+import { MapSection } from "./MapSection";
+import { NavigationButtons } from "./NavigationButtons";
 import { formatFamilyName } from "@/lib/utils/family-display";
 
 interface ClassicTemplateProps {
@@ -214,6 +216,69 @@ export function ClassicTemplate({ data, isPreview = false }: ClassicTemplateProp
           </motion.div>
         </div>
       </section>
+
+      {/* 오시는 길 섹션 */}
+      {console.log('[ClassicTemplate] showMap:', data.settings.showMap, 'lat:', data.wedding.venue.lat, 'lng:', data.wedding.venue.lng, 'transportation:', data.wedding.venue.transportation)}
+      {data.settings.showMap && data.wedding.venue.lat && data.wedding.venue.lng && (
+        <section className="py-12 md:py-20 px-6">
+          <div className="max-w-2xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8 }}
+            >
+              <h2 className="text-xl md:text-2xl font-serif text-center text-gray-800 mb-8 md:mb-12">
+                오시는 길
+              </h2>
+
+              {/* 지도 */}
+              <MapSection
+                lat={data.wedding.venue.lat}
+                lng={data.wedding.venue.lng}
+                venueName={data.wedding.venue.name}
+              />
+
+              {/* 주소 정보 */}
+              <div className="mt-4 p-4 bg-amber-50/60 rounded-lg">
+                <p className="text-sm font-medium text-gray-800">
+                  {data.wedding.venue.name}
+                  {data.wedding.venue.hall && ` ${data.wedding.venue.hall}`}
+                </p>
+                <p className="text-xs text-gray-600 mt-1">
+                  {data.wedding.venue.address}
+                </p>
+                {data.wedding.venue.tel && (
+                  <a
+                    href={`tel:${data.wedding.venue.tel}`}
+                    className="inline-flex items-center gap-1 text-xs text-amber-600 hover:text-amber-700 mt-2 min-h-[44px]"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    {data.wedding.venue.tel}
+                  </a>
+                )}
+              </div>
+
+              {/* 길찾기 버튼 */}
+              <NavigationButtons
+                lat={data.wedding.venue.lat}
+                lng={data.wedding.venue.lng}
+                venueName={data.wedding.venue.name}
+              />
+
+              {/* 교통편 안내 */}
+              {data.wedding.venue.transportation && (
+                <div className="mt-4 p-4 bg-white rounded-lg border border-amber-100">
+                  <p className="text-xs font-semibold text-gray-700 mb-2">교통편 안내</p>
+                  <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-line">
+                    {data.wedding.venue.transportation}
+                  </p>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        </section>
+      )}
 
       {/* 갤러리 섹션 */}
       {data.gallery.images.length > 0 && (

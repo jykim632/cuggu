@@ -219,11 +219,7 @@ export const CreateInvitationSchema = z.object({
 
   wedding: z.object({
     date: z.string().datetime("올바른 날짜 형식을 입력해주세요"),
-    venue: z.object({
-      name: z.string().min(1, "예식장 이름을 입력해주세요"),
-      hall: z.string().optional(),
-      address: z.string().min(1, "주소를 입력해주세요"),
-    }),
+    venue: VenueSchema,
   }),
 
   content: z.object({
@@ -235,13 +231,12 @@ export const CreateInvitationSchema = z.object({
 // 청첩장 업데이트 스키마
 // ============================================================
 
-export const UpdateInvitationSchema = CreateInvitationSchema.partial().extend({
-  status: InvitationStatusSchema.optional(),
-  gallery: GallerySchema.optional(),
-  settings: SettingsSchema.partial().optional(),
-  aiPhotoUrl: z.string().url().optional(),
-  isPasswordProtected: z.boolean().optional(),
-  extendedData: ExtendedDataSchema.optional(),
+export const UpdateInvitationSchema = InvitationSchema.partial().omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+  updatedAt: true,
+  viewCount: true,
 });
 
 // ============================================================

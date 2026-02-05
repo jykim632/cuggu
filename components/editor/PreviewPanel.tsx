@@ -67,7 +67,9 @@ export function PreviewPanel({ invitation }: PreviewPanelProps) {
           address: invitation.wedding?.venue?.address || '주소를 입력하세요',
           hall: invitation.wedding?.venue?.hall,
           tel: invitation.wedding?.venue?.tel,
-          directions: invitation.wedding?.venue?.directions,
+          lat: invitation.wedding?.venue?.lat,
+          lng: invitation.wedding?.venue?.lng,
+          transportation: invitation.wedding?.venue?.transportation,
         },
       },
 
@@ -84,6 +86,8 @@ export function PreviewPanel({ invitation }: PreviewPanelProps) {
       settings: {
         showParents: invitation.settings?.showParents ?? true,
         showAccounts: invitation.settings?.showAccounts ?? true,
+        showMap: invitation.settings?.showMap ?? true,
+        enableRsvp: invitation.settings?.enableRsvp ?? true,
         ...invitation.settings,
       },
 
