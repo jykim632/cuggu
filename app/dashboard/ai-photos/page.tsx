@@ -170,25 +170,25 @@ export default function AIPhotosPage() {
     <div className="container mx-auto max-w-6xl space-y-8 p-6">
       {/* Header */}
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold text-gray-900">AI 웨딩 사진 생성</h1>
-        <p className="text-gray-600">
+        <h1 className="text-lg font-semibold text-stone-900">AI 웨딩 사진 생성</h1>
+        <p className="text-sm text-stone-500">
           증명 사진으로 웨딩 화보를 만들어보세요. 스타일을 선택하고 4장의 AI 사진을 생성합니다.
         </p>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">잔여 크레딧:</span>
+          <span className="text-sm text-stone-500">잔여 크레딧:</span>
           {isLoadingCredits ? (
-            <span className="text-sm text-gray-400">로딩 중...</span>
+            <span className="text-sm text-stone-400">로딩 중...</span>
           ) : IS_DEV ? (
-            <span className="text-lg font-bold text-green-600">∞ (무제한)</span>
+            <span className="text-sm font-semibold text-green-600">무제한 (DEV)</span>
           ) : (
-            <span className="text-lg font-bold text-pink-600">{credits}회</span>
+            <span className="text-sm font-semibold text-stone-900">{credits}회</span>
           )}
         </div>
       </div>
 
       {/* Error Message */}
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           {error}
         </div>
       )}
@@ -203,7 +203,7 @@ export default function AIPhotosPage() {
       )}
 
       {/* Groom Section */}
-      <section className="space-y-6 rounded-lg border border-gray-200 bg-gray-50 p-6">
+      <section className="space-y-6 rounded-lg border border-stone-200 bg-stone-50 p-6">
         <AIPhotoUploader
           role="GROOM"
           image={groomImage}
@@ -222,7 +222,7 @@ export default function AIPhotosPage() {
         {canGenerateGroom && (
           <button
             onClick={() => handleGenerate('GROOM')}
-            className="w-full rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
+            className="w-full rounded-md bg-rose-600 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-rose-700"
           >
             신랑 AI 사진 생성하기 (1 크레딧)
           </button>
@@ -249,7 +249,7 @@ export default function AIPhotosPage() {
       </section>
 
       {/* Bride Section */}
-      <section className="space-y-6 rounded-lg border border-gray-200 bg-gray-50 p-6">
+      <section className="space-y-6 rounded-lg border border-stone-200 bg-stone-50 p-6">
         <AIPhotoUploader
           role="BRIDE"
           image={brideImage}
@@ -268,7 +268,7 @@ export default function AIPhotosPage() {
         {canGenerateBride && (
           <button
             onClick={() => handleGenerate('BRIDE')}
-            className="w-full rounded-lg bg-pink-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-pink-700"
+            className="w-full rounded-md bg-rose-600 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-rose-700"
           >
             신부 AI 사진 생성하기 (1 크레딧)
           </button>
@@ -299,9 +299,9 @@ export default function AIPhotosPage() {
         <div className="flex justify-center">
           <button
             onClick={handleApplyToInvitation}
-            className="rounded-lg bg-gradient-to-r from-pink-500 to-blue-500 px-8 py-4 text-lg font-bold text-white shadow-lg transition-transform hover:scale-105"
+            className="rounded-md bg-rose-600 px-8 py-3 text-sm font-medium text-white transition-colors hover:bg-rose-700"
           >
-            ❤️ 청첩장에 적용하기
+            청첩장에 적용하기
           </button>
         </div>
       )}

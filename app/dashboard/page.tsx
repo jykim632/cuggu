@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileHeart, Users, Eye, Loader2, ArrowRight } from "lucide-react";
+import { FileHeart, Users, Eye, Loader2 } from "lucide-react";
 import { StatsCard } from "@/components/admin/StatsCard";
 import { EmptyState } from "@/components/admin/EmptyState";
-import { ScrollFade } from "@/components/animations/ScrollFade";
 import { InvitationCard } from "@/components/invitation/InvitationCard";
 
 interface DashboardStats {
@@ -78,29 +77,23 @@ export default function DashboardPage() {
       label: "내 청첩장",
       value: stats.invitationCount,
       icon: FileHeart,
-      gradient: "from-pink-500 to-pink-600",
-      iconColor: "text-pink-500",
     },
     {
       label: "총 조회수",
       value: stats.totalViews,
       icon: Eye,
-      gradient: "from-purple-500 to-purple-600",
-      iconColor: "text-purple-500",
     },
     {
       label: "RSVP 응답",
       value: stats.rsvpCount,
       icon: Users,
-      gradient: "from-blue-500 to-blue-600",
-      iconColor: "text-blue-500",
     },
   ];
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-pink-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-stone-400" />
       </div>
     );
   }
@@ -108,67 +101,54 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <ScrollFade>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">대시보드</h1>
-          <p className="text-sm text-slate-600 mt-2">
-            {stats.invitationCount > 0
-              ? `총 ${stats.invitationCount}개의 청첩장을 관리하고 있습니다.`
-              : "환영합니다! 첫 청첩장을 만들어보세요."}
-          </p>
-        </div>
-      </ScrollFade>
+      <div>
+        <h1 className="text-lg font-semibold text-stone-900">대시보드</h1>
+        <p className="text-sm text-stone-500 mt-1">
+          {stats.invitationCount > 0
+            ? `총 ${stats.invitationCount}개의 청첩장을 관리하고 있습니다.`
+            : "환영합니다! 첫 청첩장을 만들어보세요."}
+        </p>
+      </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {statsConfig.map((stat, index) => (
-          <ScrollFade key={stat.label} delay={index * 0.1}>
-            <StatsCard {...stat} />
-          </ScrollFade>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {statsConfig.map((stat) => (
+          <StatsCard key={stat.label} {...stat} />
         ))}
       </div>
 
       {/* Recent Invitations or Empty State */}
       {stats.invitationCount === 0 ? (
-        <ScrollFade delay={0.3}>
-          <EmptyState />
-        </ScrollFade>
+        <EmptyState />
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Section Header */}
           <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">최근 청첩장</h2>
-              <p className="text-sm text-gray-600 mt-1">
-                최근에 작업한 청첩장입니다
-              </p>
-            </div>
+            <h2 className="text-sm font-medium text-stone-500 uppercase tracking-wide">최근 청첩장</h2>
             <button
               onClick={() => router.push("/dashboard/invitations")}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-pink-600 hover:text-pink-700 hover:bg-pink-50 rounded-lg transition-colors"
+              className="text-sm text-stone-500 hover:text-stone-700 transition-colors"
             >
               모두 보기
-              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
 
           {/* Invitations Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {recentInvitations.map((invitation, index) => (
-              <ScrollFade key={invitation.id} delay={0.3 + index * 0.1}>
-                <InvitationCard
-                  id={invitation.id}
-                  groomName={invitation.groomName}
-                  brideName={invitation.brideName}
-                  weddingDate={invitation.weddingDate}
-                  venueName={invitation.venueName}
-                  viewCount={invitation.viewCount}
-                  status={invitation.status}
-                  thumbnailUrl={invitation.galleryImages?.[0] || undefined}
-                  createdAt={invitation.createdAt}
-                  onDelete={handleDelete}
-                />
-              </ScrollFade>
+            {recentInvitations.map((invitation) => (
+              <InvitationCard
+                key={invitation.id}
+                id={invitation.id}
+                groomName={invitation.groomName}
+                brideName={invitation.brideName}
+                weddingDate={invitation.weddingDate}
+                venueName={invitation.venueName}
+                viewCount={invitation.viewCount}
+                status={invitation.status}
+                thumbnailUrl={invitation.galleryImages?.[0] || undefined}
+                createdAt={invitation.createdAt}
+                onDelete={handleDelete}
+              />
             ))}
           </div>
         </div>

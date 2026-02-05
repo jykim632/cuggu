@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, FileHeart } from "lucide-react";
 import { InvitationCard } from "@/components/invitation/InvitationCard";
-import { ScrollFade } from "@/components/animations/ScrollFade";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 
 interface Invitation {
   id: string;
@@ -106,7 +105,7 @@ export default function InvitationsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-pink-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-stone-400" />
       </div>
     );
   }
@@ -114,83 +113,68 @@ export default function InvitationsPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <ScrollFade>
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">내 청첩장</h1>
-            <p className="text-sm text-gray-600 mt-2">
-              총 {total}개의 청첩장을 관리하고 있습니다
-            </p>
-          </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold text-stone-900">내 청첩장</h1>
+          <p className="text-sm text-stone-500 mt-1">
+            총 {total}개의 청첩장을 관리하고 있습니다
+          </p>
+        </div>
 
+        <button
+          onClick={handleCreateInvitation}
+          disabled={isCreating}
+          className="flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isCreating ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              생성 중...
+            </>
+          ) : (
+            <>
+              <Plus className="w-4 h-4" />
+              새 청첩장 만들기
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Invitations Grid */}
+      {invitations.length === 0 ? (
+        <div className="border border-stone-200 bg-white rounded-lg p-12 text-center">
+          <FileHeart className="w-10 h-10 text-stone-300 mx-auto mb-4" />
+          <h3 className="text-base font-medium text-stone-900 mb-2">
+            첫 청첩장을 만들어보세요
+          </h3>
+          <p className="text-sm text-stone-500 mb-6">
+            템플릿을 선택하고 내용을 입력하면 바로 공유할 수 있습니다
+          </p>
           <button
             onClick={handleCreateInvitation}
             disabled={isCreating}
-            className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50"
           >
             {isCreating ? (
               <>
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
                 생성 중...
               </>
             ) : (
               <>
-                <Plus className="w-5 h-5" />
-                새 청첩장 만들기
+                <Plus className="w-4 h-4" />
+                청첩장 만들기
               </>
             )}
           </button>
         </div>
-      </ScrollFade>
-
-      {/* Invitations Grid */}
-      {invitations.length === 0 ? (
-        <ScrollFade delay={0.1}>
-          <div className="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 rounded-2xl border border-pink-100 p-12 text-center">
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.5 }}
-            >
-              <div className="text-6xl mb-4">💌</div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                첫 청첩장을 만들어보세요
-              </h3>
-              <p className="text-gray-600 mb-6">
-                AI가 도와주는 5분 완성 청첩장
-              </p>
-              <button
-                onClick={handleCreateInvitation}
-                disabled={isCreating}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
-              >
-                {isCreating ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    생성 중...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="w-5 h-5" />
-                    청첩장 만들기
-                  </>
-                )}
-              </button>
-            </motion.div>
-          </div>
-        </ScrollFade>
       ) : (
         <AnimatePresence mode="popLayout">
-          <motion.div
-            layout
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-          >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {invitations.map((invitation) => (
               <motion.div
                 key={invitation.id}
                 layout
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
                 transition={{ duration: 0.3 }}
               >
@@ -208,7 +192,7 @@ export default function InvitationsPage() {
                 />
               </motion.div>
             ))}
-          </motion.div>
+          </div>
         </AnimatePresence>
       )}
     </div>

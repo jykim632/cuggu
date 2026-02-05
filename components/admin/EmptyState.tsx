@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Loader2 } from "lucide-react";
+import { FileHeart, Loader2 } from "lucide-react";
 
 export function EmptyState() {
   const router = useRouter();
@@ -67,89 +66,34 @@ export function EmptyState() {
   };
 
   return (
-    <Card className="relative overflow-hidden">
+    <Card>
       <CardContent className="text-center py-16">
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
+        {/* Icon */}
+        <FileHeart className="w-10 h-10 text-stone-300 mx-auto mb-4" />
+
+        {/* Title & Description */}
+        <h3 className="text-base font-medium text-stone-900 mb-2">
+          첫 청첩장을 만들어보세요
+        </h3>
+        <p className="text-sm text-stone-500 mb-8">
+          템플릿을 선택하고 내용을 입력하면 바로 공유할 수 있습니다
+        </p>
+
+        {/* CTA Button */}
+        <Button
+          size="lg"
+          onClick={handleCreateInvitation}
+          disabled={isCreating}
         >
-          {/* Icon */}
-          <div className="text-6xl mb-4">💌</div>
-
-          {/* Title & Description */}
-          <h3 className="text-2xl font-bold text-slate-900 mb-2">
-            첫 청첩장을 만들어보세요
-          </h3>
-          <p className="text-sm text-slate-600 mb-8">
-            AI가 도와주는 5분 완성 청첩장
-          </p>
-
-          {/* 3-step guide */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-2xl mx-auto mb-8">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-pink-600 font-bold text-lg">1</span>
-              </div>
-              <p className="text-sm font-medium text-slate-700">템플릿 선택</p>
-              <p className="text-xs text-slate-500 mt-1">20+ 프리미엄 디자인</p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-purple-600 font-bold text-lg">2</span>
-              </div>
-              <p className="text-sm font-medium text-slate-700">내용 입력</p>
-              <p className="text-xs text-slate-500 mt-1">드래그 앤 드롭 편집</p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-            >
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-blue-600 font-bold text-lg">3</span>
-              </div>
-              <p className="text-sm font-medium text-slate-700">공유하기</p>
-              <p className="text-xs text-slate-500 mt-1">카카오톡 & QR 코드</p>
-            </motion.div>
-          </div>
-
-          {/* CTA Button */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-          >
-            <Button
-              size="lg"
-              className="shadow-lg"
-              onClick={handleCreateInvitation}
-              disabled={isCreating}
-            >
-              {isCreating ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  생성 중...
-                </>
-              ) : (
-                "첫 청첩장 만들기"
-              )}
-            </Button>
-            <p className="text-sm text-slate-500 mt-4">
-              무료로 시작하고, 필요한 기능만 결제하세요
-            </p>
-          </motion.div>
-        </motion.div>
+          {isCreating ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              생성 중...
+            </>
+          ) : (
+            "첫 청첩장 만들기"
+          )}
+        </Button>
       </CardContent>
     </Card>
   );

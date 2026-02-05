@@ -96,7 +96,7 @@ export function ConfirmDialog({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={handleCancel}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-black/50 z-50"
           />
 
           {/* Dialog */}
@@ -106,7 +106,7 @@ export function ConfirmDialog({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ type: "spring", duration: 0.3 }}
-              className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+              className="bg-white rounded-lg shadow-lg max-w-md w-full overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
@@ -114,25 +114,25 @@ export function ConfirmDialog({
                 <button
                   onClick={handleCancel}
                   disabled={isLoading}
-                  className="absolute top-4 right-4 p-2 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="absolute top-4 right-4 p-2 rounded-md hover:bg-stone-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label="닫기"
                 >
-                  <X className="w-5 h-5 text-gray-500" />
+                  <X className="w-5 h-5 text-stone-500" />
                 </button>
 
                 <div className="flex items-start gap-4">
                   {/* Icon */}
-                  <div className={`flex-shrink-0 w-12 h-12 rounded-full ${config.iconBg} flex items-center justify-center`}>
-                    <Icon className={`w-6 h-6 ${config.iconColor}`} />
+                  <div className={`flex-shrink-0 w-10 h-10 rounded-full ${config.iconBg} flex items-center justify-center`}>
+                    <Icon className={`w-5 h-5 ${config.iconColor}`} />
                   </div>
 
                   {/* Content */}
                   <div className="flex-1 pt-1">
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">
+                    <h3 className="text-base font-medium text-stone-900 mb-2">
                       {title}
                     </h3>
                     {description && (
-                      <p className="text-sm text-gray-600 leading-relaxed">
+                      <p className="text-sm text-stone-500 leading-relaxed">
                         {description}
                       </p>
                     )}
@@ -141,18 +141,18 @@ export function ConfirmDialog({
               </div>
 
               {/* Actions */}
-              <div className="flex gap-3 p-6 pt-2 bg-gray-50">
+              <div className="flex gap-3 p-6 pt-2 bg-stone-50">
                 <button
                   onClick={handleCancel}
                   disabled={isLoading}
-                  className="flex-1 px-4 py-2.5 rounded-xl font-semibold text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2.5 rounded-md font-medium text-stone-700 bg-white border border-stone-300 hover:bg-stone-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {cancelText}
                 </button>
                 <button
                   onClick={handleConfirm}
                   disabled={isLoading}
-                  className={`flex-1 px-4 py-2.5 rounded-xl font-semibold ${config.confirmBg} ${config.confirmText} transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm`}
+                  className={`flex-1 px-4 py-2.5 rounded-md font-medium ${config.confirmBg} ${config.confirmText} transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   {isLoading ? "처리 중..." : confirmText}
                 </button>
