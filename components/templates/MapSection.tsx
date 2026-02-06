@@ -32,20 +32,33 @@ export function MapSection({ lat, lng, venueName }: MapSectionProps) {
       return;
     }
 
-    // 이미 SDK 로드됨
-    if (window.kakao?.maps) {
+    // 이미 SDK 완전히 로드됨 (load() 콜백까지 완료)
+    if (typeof window.kakao?.maps?.LatLng === 'function') {
       setIsLoaded(true);
+      return;
+    }
+
+    // SDK 객체는 있지만 load() 아직 안 됨
+    if (window.kakao?.maps) {
+      window.kakao.maps.load(() => {
+        setIsLoaded(true);
+      });
       return;
     }
 
     // 이미 스크립트 태그가 있는지 확인
     const existingScript = document.querySelector('script[src*="dapi.kakao.com/v2/maps/sdk.js"]');
     if (existingScript) {
-      // 스크립트는 있지만 아직 로드 안 됨 → 로드 완료 대기
+      // 스크립트는 있지만 아직 로드 안 됨 → kakao.maps.load() 완료 대기
       const checkLoaded = setInterval(() => {
         if (window.kakao?.maps) {
           clearInterval(checkLoaded);
-          setIsLoaded(true);
+          // autoload=false이므로 load() 콜백 완료 확인 필요
+          if (typeof window.kakao.maps.LatLng === 'function') {
+            setIsLoaded(true);
+          } else {
+            window.kakao.maps.load(() => setIsLoaded(true));
+          }
         }
       }, 100);
       return () => clearInterval(checkLoaded);
