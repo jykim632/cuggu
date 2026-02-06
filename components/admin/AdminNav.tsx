@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, CreditCard, ArrowLeft } from "lucide-react";
+import { LayoutDashboard, Users, CreditCard, Sparkles, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/admin", label: "대시보드", icon: LayoutDashboard },
   { href: "/admin/users", label: "유저 관리", icon: Users },
   { href: "/admin/payments", label: "결제 내역", icon: CreditCard },
+  { href: "/admin/ai-models", label: "AI 모델", icon: Sparkles },
 ];
 
 export function AdminNav() {

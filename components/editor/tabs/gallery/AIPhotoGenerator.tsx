@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sparkles, Loader2, ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
 import { AIPhotoUploader } from '@/app/dashboard/ai-photos/components/AIPhotoUploader';
 import { StyleSelector } from '@/app/dashboard/ai-photos/components/StyleSelector';
 import { AIStreamingGallery } from './AIStreamingGallery';
 import { AIResultGallery } from './AIResultGallery';
 import { PersonRole, AIStyle, AIGenerationResult } from '@/types/ai';
-import { AI_MODELS, DEFAULT_MODEL } from '@/lib/ai/models';
+import { DEFAULT_MODEL } from '@/lib/ai/models';
 
 interface AIPhotoGeneratorProps {
   role: PersonRole;
@@ -18,12 +18,13 @@ interface AIPhotoGeneratorProps {
   disabled?: boolean;
 }
 
-// 사용자에게 노출할 모델 목록
-const AVAILABLE_MODELS = [
-  { id: 'flux-pro', recommended: true },
-  { id: 'flux-dev', recommended: false },
-  { id: 'photomaker', recommended: false },
-];
+interface AvailableModel {
+  id: string;
+  name: string;
+  description: string;
+  costPerImage: number;
+  isRecommended: boolean;
+}
 
 export function AIPhotoGenerator({
   role,
@@ -39,6 +40,9 @@ export function AIPhotoGenerator({
   const [result, setResult] = useState<AIGenerationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // 모델 목록 (API에서 fetch)
+  const [availableModels, setAvailableModels] = useState<AvailableModel[]>([]);
+
   // 고급 설정
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL);
@@ -46,6 +50,26 @@ export function AIPhotoGenerator({
   // 스트리밍 상태
   const [streamingUrls, setStreamingUrls] = useState<(string | null)[]>([null, null, null, null]);
   const [statusMessage, setStatusMessage] = useState<string>('');
+
+  // API에서 활성 모델 fetch
+  useEffect(() => {
+    fetch('/api/ai/models')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.data.models.length > 0) {
+          setAvailableModels(data.data.models);
+          // 현재 선택된 모델이 비활성화된 경우 fallback
+          const ids = data.data.models.map((m: AvailableModel) => m.id);
+          if (!ids.includes(selectedModel)) {
+            setSelectedModel(data.data.defaultModel || ids[0]);
+          }
+        }
+      })
+      .catch(() => {
+        // fetch 실패 시 기본값 유지
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const roleLabel = role === 'GROOM' ? '신랑' : '신부';
   const canGenerate = image && style && credits > 0 && !generating && !disabled;
@@ -221,56 +245,51 @@ export function AIPhotoGenerator({
             <div className="mt-3 space-y-2">
               <p className="text-xs text-stone-500">AI 모델 선택</p>
               <div className="space-y-1.5">
-                {AVAILABLE_MODELS.map(({ id, recommended }) => {
-                  const model = Object.values(AI_MODELS).find((m) => m.id === id);
-                  if (!model) return null;
-
-                  return (
-                    <label
-                      key={id}
-                      className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-colors ${
-                        selectedModel === id
-                          ? 'border-pink-500 bg-pink-50'
-                          : 'border-stone-200 hover:border-stone-300'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name={`model-${role}`}
-                        value={id}
-                        checked={selectedModel === id}
-                        onChange={(e) => setSelectedModel(e.target.value)}
-                        className="sr-only"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium text-stone-700">
-                            {model.name}
+                {availableModels.map((model) => (
+                  <label
+                    key={model.id}
+                    className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-colors ${
+                      selectedModel === model.id
+                        ? 'border-pink-500 bg-pink-50'
+                        : 'border-stone-200 hover:border-stone-300'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name={`model-${role}`}
+                      value={model.id}
+                      checked={selectedModel === model.id}
+                      onChange={(e) => setSelectedModel(e.target.value)}
+                      className="sr-only"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-stone-700">
+                          {model.name}
+                        </span>
+                        {model.isRecommended && (
+                          <span className="text-[10px] bg-pink-500 text-white px-1.5 py-0.5 rounded">
+                            추천
                           </span>
-                          {recommended && (
-                            <span className="text-[10px] bg-pink-500 text-white px-1.5 py-0.5 rounded">
-                              추천
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[10px] text-stone-500 mt-0.5">
-                          {model.description} · ${model.costPerImage}/장
-                        </p>
-                      </div>
-                      <div
-                        className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                          selectedModel === id
-                            ? 'border-pink-500'
-                            : 'border-stone-300'
-                        }`}
-                      >
-                        {selectedModel === id && (
-                          <div className="w-2 h-2 rounded-full bg-pink-500" />
                         )}
                       </div>
-                    </label>
-                  );
-                })}
+                      <p className="text-[10px] text-stone-500 mt-0.5">
+                        {model.description} · ${model.costPerImage}/장
+                      </p>
+                    </div>
+                    <div
+                      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                        selectedModel === model.id
+                          ? 'border-pink-500'
+                          : 'border-stone-300'
+                      }`}
+                    >
+                      {selectedModel === model.id && (
+                        <div className="w-2 h-2 rounded-full bg-pink-500" />
+                      )}
+                    </div>
+                  </label>
+                ))}
               </div>
             </div>
           )}

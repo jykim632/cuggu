@@ -277,7 +277,28 @@ export const payments = pgTable(
   })
 );
 
-// 7-8. NextAuth.js tables
+// 7. AI Model Settings (Admin 관리)
+export const aiModelSettings = pgTable('ai_model_settings', {
+  modelId: varchar('model_id', { length: 64 }).primaryKey(),
+  enabled: boolean('enabled').default(true).notNull(),
+  isRecommended: boolean('is_recommended').default(false).notNull(),
+  sortOrder: integer('sort_order').default(0).notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// 8. App Settings (범용 설정 - UI는 추후)
+export const appSettings = pgTable('app_settings', {
+  key: varchar('key', { length: 128 }).primaryKey(),
+  value: jsonb('value').notNull(),
+  category: varchar('category', { length: 64 }).notNull(),
+  label: varchar('label', { length: 255 }).notNull(),
+  description: text('description'),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  categoryIdx: index('app_settings_category_idx').on(table.category),
+}));
+
+// 9-10. NextAuth.js tables
 export const accounts = pgTable(
   'accounts',
   {
