@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { EDITOR_TABS, TAB_IDS, DEFAULT_ENABLED_SECTIONS } from '@/lib/editor/tabs';
 
 // Invitation 타입 임포트 (추후 schemas에서 가져올 예정)
 type Invitation = any; // TODO: schemas/invitation.ts에서 타입 임포트
@@ -21,6 +22,8 @@ interface InvitationEditorStore {
   setInvitation: (data: Partial<Invitation>) => void;
   updateInvitation: (data: Partial<Invitation>) => void;
   setActiveTab: (tab: string) => void;
+  toggleSection: (sectionId: string, enabled: boolean) => void;
+  getEnabledSections: () => Record<string, boolean>;
   save: () => Promise<void>;
   reset: () => void;
   setValidation: (tabId: string, status: ValidationStatus) => void;
@@ -69,6 +72,35 @@ export const useInvitationEditor = create<InvitationEditorStore>((set, get) => (
   // 탭 전환
   setActiveTab: (tab) => {
     set({ activeTab: tab });
+  },
+
+  // 섹션 토글
+  toggleSection: (sectionId, enabled) => {
+    const current = get().invitation;
+    const extendedData = (current.extendedData as Record<string, unknown>) || {};
+    const enabledSections = (extendedData.enabledSections as Record<string, boolean>) || { ...DEFAULT_ENABLED_SECTIONS };
+
+    const updated = { ...enabledSections, [sectionId]: enabled };
+
+    get().updateInvitation({
+      extendedData: { ...extendedData, enabledSections: updated },
+    });
+
+    // 토글 off한 섹션이 현재 activeTab이면 다음 활성 탭으로 이동
+    if (!enabled && get().activeTab === sectionId) {
+      const nextTab = TAB_IDS.find((id) => {
+        const tab = EDITOR_TABS.find((t) => t.id === id);
+        if (!tab?.toggleable) return true;
+        return id === sectionId ? false : updated[id] !== false;
+      });
+      if (nextTab) set({ activeTab: nextTab });
+    }
+  },
+
+  // enabledSections 헬퍼
+  getEnabledSections: () => {
+    const extendedData = (get().invitation.extendedData as Record<string, unknown>) || {};
+    return (extendedData.enabledSections as Record<string, boolean>) || { ...DEFAULT_ENABLED_SECTIONS };
   },
 
   // 검증 상태 업데이트

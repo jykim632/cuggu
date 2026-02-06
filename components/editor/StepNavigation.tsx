@@ -9,24 +9,35 @@ interface StepNavigationProps {
 }
 
 export function StepNavigation({ position }: StepNavigationProps) {
-  const { activeTab, setActiveTab } = useInvitationEditor();
+  const { activeTab, setActiveTab, getEnabledSections } = useInvitationEditor();
+  const enabledSections = getEnabledSections();
 
-  const currentIndex = TAB_IDS.indexOf(activeTab);
-  const isFirst = currentIndex === 0;
-  const isLast = currentIndex === TAB_IDS.length - 1;
-  const currentTab = EDITOR_TABS[currentIndex];
+  // 활성화된 탭만 필터링
+  const enabledTabIds = TAB_IDS.filter((id) => {
+    const tab = EDITOR_TABS.find((t) => t.id === id);
+    if (!tab?.toggleable) return true;
+    return enabledSections[id] !== false;
+  });
+
+  const currentIndex = enabledTabIds.indexOf(activeTab);
+  const isFirst = currentIndex <= 0;
+  const isLast = currentIndex === enabledTabIds.length - 1;
+  const currentTab = EDITOR_TABS.find((t) => t.id === activeTab);
 
   const goToPrev = () => {
     if (!isFirst) {
-      setActiveTab(TAB_IDS[currentIndex - 1]);
+      setActiveTab(enabledTabIds[currentIndex - 1]);
     }
   };
 
   const goToNext = () => {
     if (!isLast) {
-      setActiveTab(TAB_IDS[currentIndex + 1]);
+      setActiveTab(enabledTabIds[currentIndex + 1]);
     }
   };
+
+  // 비활성 탭에 있을 경우 (토글 off된 탭을 직접 클릭한 경우) 인덱스 표시 생략
+  const displayIndex = currentIndex >= 0 ? currentIndex + 1 : '–';
 
   if (position === 'top') {
     return (
@@ -41,9 +52,9 @@ export function StepNavigation({ position }: StepNavigationProps) {
             <ChevronLeft className="w-4 h-4" />
           </button>
           <span className="text-sm text-stone-600">
-            <span className="font-medium text-stone-900">{currentIndex + 1}</span>
+            <span className="font-medium text-stone-900">{displayIndex}</span>
             <span className="mx-1">/</span>
-            <span>{TAB_IDS.length}</span>
+            <span>{enabledTabIds.length}</span>
             <span className="ml-2 text-stone-500">{currentTab?.label}</span>
           </span>
           <button

@@ -25,20 +25,29 @@ export function BaseTemplate({ data, theme, isPreview }: BaseTemplateProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const sectionOrder = sanitizeSectionOrder(data.settings.sectionOrder as SectionId[] | undefined);
 
+  // 섹션 활성화 상태 (enabledSections 없으면 전부 활성)
+  const enabledSections = (data.extendedData?.enabledSections as Record<string, boolean>) ?? {};
+
+  // sectionId → enabledSections key 매핑 (account ↔ accounts)
+  const isSectionEnabled = (sectionId: SectionId): boolean => {
+    const key = sectionId === 'accounts' ? 'account' : sectionId;
+    return enabledSections[key] !== false;
+  };
+
   const sections: Record<SectionId, () => ReactNode> = {
-    greeting: () => <GreetingSection data={data} theme={theme} />,
+    greeting: () => isSectionEnabled('greeting') ? <GreetingSection data={data} theme={theme} /> : null,
     parents: () => <ParentsSection data={data} theme={theme} />,
     ceremony: () => <CeremonySection data={data} theme={theme} />,
     map: () => <MapInfoSection data={data} theme={theme} />,
-    gallery: () => (
+    gallery: () => isSectionEnabled('gallery') ? (
       <GallerySection
         data={data}
         theme={theme}
         lightboxIndex={lightboxIndex}
         setLightboxIndex={setLightboxIndex}
       />
-    ),
-    accounts: () => <AccountsSection data={data} theme={theme} />,
+    ) : null,
+    accounts: () => isSectionEnabled('accounts') ? <AccountsSection data={data} theme={theme} /> : null,
     rsvp: () => <RsvpSectionWrapper data={data} theme={theme} />,
   };
 

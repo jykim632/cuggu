@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useInvitationEditor } from '@/stores/invitation-editor';
 import { TopBar } from '@/components/editor/TopBar';
-import { Sidebar } from '@/components/editor/Sidebar';
+import { SectionPanel } from '@/components/editor/SectionPanel';
 import { EditorPanel } from '@/components/editor/EditorPanel';
 import { PreviewPanel } from '@/components/editor/PreviewPanel';
 
@@ -105,8 +105,8 @@ export default function InvitationEditorPage() {
 
       {/* 3-패널 레이아웃 */}
       <div className="flex-1 flex overflow-hidden">
-        {/* 좌측: 탭 메뉴 */}
-        <Sidebar activeTab={activeTab} invitation={invitation} />
+        {/* 좌측: 섹션 패널 */}
+        <SectionPanel activeTab={activeTab} invitation={invitation} />
 
         {/* 중앙: 편집 영역 */}
         <EditorPanel activeTab={activeTab} invitation={invitation} />

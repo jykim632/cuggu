@@ -187,6 +187,11 @@ export const ExtendedDataSchema = z.object({
     coverImage: z.string().url().optional(),
   }).optional(),
   settings: SettingsSchema.partial().optional(),
+  enabledSections: z.object({
+    greeting: z.boolean(),
+    gallery: z.boolean(),
+    account: z.boolean(),
+  }).optional(),
 }).default({});
 
 export type ExtendedData = z.infer<typeof ExtendedDataSchema>;
@@ -228,6 +233,9 @@ export const InvitationSchema = z.object({
 
   // 설정
   settings: SettingsSchema,
+
+  // 확장 데이터 (섹션 토글 등)
+  extendedData: ExtendedDataSchema.optional(),
 
   // 보안
   isPasswordProtected: z.boolean().default(false),
