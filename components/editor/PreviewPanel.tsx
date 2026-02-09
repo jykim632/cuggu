@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { getTemplateComponent } from '@/lib/templates/get-template';
+import { BaseTemplate } from '@/components/templates/BaseTemplate';
 import { PreviewViewport } from '@/components/preview/PreviewViewport';
 import { ZoomIn, ZoomOut, Smartphone, Monitor } from 'lucide-react';
 
@@ -113,6 +114,9 @@ export function PreviewPanel({ invitation }: PreviewPanelProps) {
 
   const TemplateComponent = getTemplateComponent(invitation.templateId || 'classic');
 
+  // customTheme이 있으면 BaseTemplate 직접 사용
+  const isCustom = invitation.templateId === 'custom' && invitation.customTheme;
+
   return (
     <aside className="w-[420px] bg-stone-50 border-l border-stone-200 flex flex-col flex-shrink-0">
       {/* 컨트롤 */}
@@ -216,7 +220,11 @@ export function PreviewPanel({ invitation }: PreviewPanelProps) {
           phoneModel={phoneModel}
           zoom={zoom}
         >
-          <TemplateComponent data={previewData} isPreview />
+          {isCustom ? (
+            <BaseTemplate data={previewData} theme={invitation.customTheme} isPreview />
+          ) : (
+            <TemplateComponent data={previewData} isPreview />
+          )}
         </PreviewViewport>
       </div>
 

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import type { Invitation } from '@/schemas/invitation';
 import { getTemplateComponent } from '@/lib/templates/get-template';
+import { BaseTemplate } from '@/components/templates/BaseTemplate';
 import { PreviewViewport } from '@/components/preview/PreviewViewport';
 import {
   ArrowLeft,
@@ -47,6 +48,7 @@ export function PreviewClient({ data }: PreviewClientProps) {
   const [phoneModel, setPhoneModel] = useLocalStorage<'iphone' | 'galaxy'>('cuggu-preview-phone', 'iphone');
   const [zoom, setZoom] = useLocalStorage<number>('cuggu-preview-zoom', 100);
 
+  const isCustom = data.templateId === 'custom' && (data as any).customTheme;
   const TemplateComponent = getTemplateComponent(data.templateId);
 
   const modeButtons: { value: ViewMode; label: string; icon: typeof Monitor }[] = [
@@ -149,7 +151,11 @@ export function PreviewClient({ data }: PreviewClientProps) {
             phoneModel={phoneModel}
             zoom={mode === 'phone' ? zoom : 100}
           >
-            <TemplateComponent data={data} isPreview={mode === 'phone'} />
+            {isCustom ? (
+              <BaseTemplate data={data} theme={(data as any).customTheme} isPreview={mode === 'phone'} />
+            ) : (
+              <TemplateComponent data={data} isPreview={mode === 'phone'} />
+            )}
           </PreviewViewport>
         </div>
       </div>

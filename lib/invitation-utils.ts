@@ -170,6 +170,7 @@ export function dbRecordToInvitation(row: DbInvitationRow): Invitation {
       calendarStyle: ext.settings?.calendarStyle ?? 'calendar',
     },
 
+    customTheme: (ext as any).customTheme,
     aiPhotoUrl: row.aiPhotoUrl || undefined,
     isPasswordProtected: row.isPasswordProtected,
     status: row.status,
@@ -238,6 +239,9 @@ export function invitationToDbUpdate(data: Record<string, any>) {
   }
   if (data.settings) {
     extendedData.settings = data.settings;
+  }
+  if (data.customTheme !== undefined) {
+    extendedData.customTheme = data.customTheme;
   }
 
   if (Object.keys(extendedData).length > 0) {

@@ -2,6 +2,7 @@
 
 import type { Invitation } from '@/schemas/invitation';
 import { getTemplateComponent } from '@/lib/templates/get-template';
+import { BaseTemplate } from '@/components/templates/BaseTemplate';
 import { ShareBar } from '@/components/invitation/ShareBar';
 
 interface InvitationViewProps {
@@ -15,11 +16,16 @@ interface InvitationViewProps {
  * Client Component로 분리
  */
 export function InvitationView({ data }: InvitationViewProps) {
+  const isCustom = data.templateId === 'custom' && (data as any).customTheme;
   const TemplateComponent = getTemplateComponent(data.templateId);
 
   return (
     <main className="min-h-screen pb-16">
-      <TemplateComponent data={data} />
+      {isCustom ? (
+        <BaseTemplate data={data} theme={(data as any).customTheme} />
+      ) : (
+        <TemplateComponent data={data} />
+      )}
       <ShareBar
         invitationId={data.id}
         groomName={data.groom.name}
