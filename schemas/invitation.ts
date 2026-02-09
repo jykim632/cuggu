@@ -193,7 +193,9 @@ export const ExtendedDataSchema = z.object({
     greeting: z.boolean(),
     gallery: z.boolean(),
     account: z.boolean(),
+    rsvp: z.boolean().optional(),
   }).optional(),
+  customTheme: z.any().optional(),
 }).default({});
 
 export type ExtendedData = z.infer<typeof ExtendedDataSchema>;
@@ -232,6 +234,9 @@ export const InvitationSchema = z.object({
 
   // AI 생성 사진
   aiPhotoUrl: z.string().url().optional(),
+
+  // AI 생성 커스텀 테마
+  customTheme: z.any().optional(),
 
   // 설정
   settings: SettingsSchema,

@@ -78,6 +78,9 @@ export function SectionPanel({ activeTab, invitation }: SectionPanelProps) {
         invitation.bride?.account?.bank && invitation.bride?.account?.accountNumber;
       return hasGroomAccount || hasBrideAccount ? 'completed' : 'optional';
     }
+    if (tabId === 'rsvp') {
+      return invitation.settings?.enableRsvp !== false ? 'completed' : 'optional';
+    }
     return 'optional';
   };
 
@@ -124,8 +127,13 @@ export function SectionPanel({ activeTab, invitation }: SectionPanelProps) {
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className={`text-sm font-medium ${isActive ? 'text-stone-900' : 'text-stone-700'}`}>
+            <div className={`text-sm font-medium ${isActive ? 'text-stone-900' : 'text-stone-700'} flex items-center gap-1.5`}>
               {tab.label}
+              {tab.badge && (
+                <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-gradient-to-r from-violet-500 to-pink-500 text-white rounded-md leading-none">
+                  {tab.badge}
+                </span>
+              )}
             </div>
             <div className="text-xs text-stone-400 mt-0.5 leading-tight">
               {tab.description}

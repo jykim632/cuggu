@@ -392,37 +392,6 @@ export function VenueTab() {
         </div>
       </div>
 
-      {/* D-Day 달력 스타일 */}
-      <div className="bg-white rounded-xl p-6 space-y-4 border border-stone-200">
-        <h3 className="text-sm font-medium text-stone-700 mb-3">D-Day 달력</h3>
-
-        <div>
-          <label className="block text-sm font-medium text-stone-600 mb-2">
-            달력 스타일
-          </label>
-          <select
-            value={invitation.settings?.calendarStyle ?? 'calendar'}
-            onChange={(e) => {
-              updateInvitation({
-                settings: {
-                  ...invitation.settings,
-                  calendarStyle: e.target.value as 'none' | 'calendar' | 'countdown' | 'minimal',
-                },
-              });
-            }}
-            className="w-full px-4 py-3 text-sm bg-white border border-stone-200 rounded-lg focus:ring-1 focus:ring-pink-300 focus:border-pink-300 transition-colors"
-          >
-            <option value="none">없음</option>
-            <option value="calendar">미니 달력</option>
-            <option value="countdown">카운트다운</option>
-            <option value="minimal">미니멀</option>
-          </select>
-          <p className="text-xs text-stone-400 mt-2">
-            예식 정보 섹션에 표시되는 D-Day 위젯 스타일을 선택하세요
-          </p>
-        </div>
-      </div>
-
       {/* Portal Dropdown */}
       {typeof window !== 'undefined' && createPortal(dropdown, document.body)}
     </div>

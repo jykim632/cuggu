@@ -218,6 +218,26 @@ export function SettingsTab() {
         </div>
       </div>
 
+      {/* D-Day 달력 스타일 */}
+      <div className="bg-white rounded-xl p-6 space-y-4 border border-stone-200">
+        <div>
+          <h3 className="text-sm font-medium text-stone-700">D-Day 달력</h3>
+          <p className="text-xs text-stone-500 mt-1">
+            예식 정보 섹션에 표시되는 D-Day 위젯 스타일
+          </p>
+        </div>
+        <select
+          value={invitation.settings?.calendarStyle ?? 'calendar'}
+          onChange={(e) => handleSettingsChange('calendarStyle', e.target.value)}
+          className="w-full px-4 py-3 text-sm bg-white border border-stone-200 rounded-lg focus:ring-1 focus:ring-pink-300 focus:border-pink-300 transition-colors"
+        >
+          <option value="none">없음</option>
+          <option value="calendar">미니 달력</option>
+          <option value="countdown">카운트다운</option>
+          <option value="minimal">미니멀</option>
+        </select>
+      </div>
+
       {/* 비밀번호 보호 */}
       <div className="bg-white rounded-xl p-6 space-y-4 border border-stone-200">
         <div className="flex items-center justify-between">
@@ -254,102 +274,6 @@ export function SettingsTab() {
             <p className="text-xs text-stone-500 mt-1.5">
               비밀번호는 4자리 숫자로 설정하세요
             </p>
-          </div>
-        )}
-      </div>
-
-      {/* RSVP 기능 */}
-      <div className="bg-white rounded-xl p-6 space-y-4 border border-stone-200">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-medium text-stone-700">참석 여부 (RSVP)</h3>
-            <p className="text-xs text-stone-500 mt-1">
-              하객이 참석 여부를 전송할 수 있습니다
-            </p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={invitation.settings?.enableRsvp !== false}
-              onChange={(e) => handleSettingsChange('enableRsvp', e.target.checked)}
-              className="sr-only peer"
-            />
-            <div className="w-11 h-6 bg-stone-200 border border-stone-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-pink-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-500 peer-checked:border-pink-500"></div>
-          </label>
-        </div>
-
-        {/* RSVP 필드 설정 */}
-        {invitation.settings?.enableRsvp !== false && (
-          <div className="pt-4 border-t border-stone-100 space-y-3">
-            <p className="text-xs font-medium text-stone-500 mb-2">수집할 정보</p>
-
-            {/* 이름 - 필수 */}
-            <label className="flex items-center justify-between py-1.5">
-              <span className="text-sm text-stone-600">이름</span>
-              <span className="text-xs text-stone-400">필수</span>
-            </label>
-
-            {/* 연락처 */}
-            <label className="flex items-center justify-between py-1.5 cursor-pointer">
-              <span className="text-sm text-stone-600">연락처</span>
-              <input
-                type="checkbox"
-                checked={invitation.settings?.rsvpFields?.phone !== false}
-                onChange={(e) => handleSettingsChange('rsvpFields', {
-                  ...invitation.settings?.rsvpFields,
-                  phone: e.target.checked,
-                })}
-                className="w-4 h-4 text-pink-500 border-stone-300 rounded focus:ring-pink-200"
-              />
-            </label>
-
-            {/* 참석 여부 - 필수 */}
-            <label className="flex items-center justify-between py-1.5">
-              <span className="text-sm text-stone-600">참석 여부</span>
-              <span className="text-xs text-stone-400">필수</span>
-            </label>
-
-            {/* 동행 인원 */}
-            <label className="flex items-center justify-between py-1.5 cursor-pointer">
-              <span className="text-sm text-stone-600">동행 인원</span>
-              <input
-                type="checkbox"
-                checked={invitation.settings?.rsvpFields?.guestCount !== false}
-                onChange={(e) => handleSettingsChange('rsvpFields', {
-                  ...invitation.settings?.rsvpFields,
-                  guestCount: e.target.checked,
-                })}
-                className="w-4 h-4 text-pink-500 border-stone-300 rounded focus:ring-pink-200"
-              />
-            </label>
-
-            {/* 식사 */}
-            <label className="flex items-center justify-between py-1.5 cursor-pointer">
-              <span className="text-sm text-stone-600">식사 옵션</span>
-              <input
-                type="checkbox"
-                checked={invitation.settings?.rsvpFields?.meal !== false}
-                onChange={(e) => handleSettingsChange('rsvpFields', {
-                  ...invitation.settings?.rsvpFields,
-                  meal: e.target.checked,
-                })}
-                className="w-4 h-4 text-pink-500 border-stone-300 rounded focus:ring-pink-200"
-              />
-            </label>
-
-            {/* 축하 메시지 */}
-            <label className="flex items-center justify-between py-1.5 cursor-pointer">
-              <span className="text-sm text-stone-600">축하 메시지</span>
-              <input
-                type="checkbox"
-                checked={invitation.settings?.rsvpFields?.message !== false}
-                onChange={(e) => handleSettingsChange('rsvpFields', {
-                  ...invitation.settings?.rsvpFields,
-                  message: e.target.checked,
-                })}
-                className="w-4 h-4 text-pink-500 border-stone-300 rounded focus:ring-pink-200"
-              />
-            </label>
           </div>
         )}
       </div>

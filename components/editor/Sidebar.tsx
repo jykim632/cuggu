@@ -56,6 +56,10 @@ export function Sidebar({ activeTab, invitation }: SidebarProps) {
       return hasGroomAccount || hasBrideAccount ? 'completed' : 'optional';
     }
 
+    if (tabId === 'rsvp') {
+      return invitation.settings?.enableRsvp !== false ? 'completed' : 'optional';
+    }
+
     return 'optional';
   };
 

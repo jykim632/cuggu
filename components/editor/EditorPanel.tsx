@@ -6,6 +6,7 @@ import { VenueTab } from './tabs/VenueTab';
 import { GreetingTab } from './tabs/GreetingTab';
 import { GalleryTab } from './tabs/GalleryTab';
 import { AccountTab } from './tabs/AccountTab';
+import { RsvpTab } from './tabs/RsvpTab';
 import { SettingsTab } from './tabs/SettingsTab';
 import { StepNavigation } from './StepNavigation';
 
@@ -34,6 +35,8 @@ export function EditorPanel({ activeTab, invitation }: EditorPanelProps) {
         return <GalleryTab />;
       case 'account':
         return <AccountTab />;
+      case 'rsvp':
+        return <RsvpTab />;
       case 'settings':
         return <SettingsTab />;
       default:
