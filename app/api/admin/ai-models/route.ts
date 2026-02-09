@@ -11,6 +11,8 @@ import {
 import { AI_MODELS } from "@/lib/ai/models";
 import { z } from "zod";
 
+const THEME_MODEL_ID = "theme-claude-sonnet";
+
 const PatchSchema = z.object({
   modelId: z.string().min(1).max(64),
   enabled: z.boolean().optional(),
@@ -41,7 +43,15 @@ export const GET = withErrorHandler(async () => {
 
   models.sort((a, b) => a.sortOrder - b.sortOrder);
 
-  return successResponse({ models });
+  // 테마 모델 설정
+  const themeSetting = settingsMap.get(THEME_MODEL_ID);
+  const themeModel = {
+    modelId: THEME_MODEL_ID,
+    enabled: themeSetting?.enabled ?? true,
+    updatedAt: themeSetting?.updatedAt?.toISOString() ?? null,
+  };
+
+  return successResponse({ models, themeModel });
 });
 
 /**
@@ -54,14 +64,15 @@ export const PATCH = withErrorHandler(async (req: NextRequest) => {
   const body = await req.json();
   const data = PatchSchema.parse(body);
 
-  // 존재하는 모델인지 확인
-  const modelExists = Object.values(AI_MODELS).some((m) => m.id === data.modelId);
-  if (!modelExists) {
+  // 존재하는 모델인지 확인 (테마 모델도 허용)
+  const isPhotoModel = Object.values(AI_MODELS).some((m) => m.id === data.modelId);
+  const isThemeModel = data.modelId === THEME_MODEL_ID;
+  if (!isPhotoModel && !isThemeModel) {
     throw new ValidationError(`존재하지 않는 모델입니다: ${data.modelId}`);
   }
 
-  // 비활성화 시 최소 1개 활성 모델 보장
-  if (data.enabled === false) {
+  // 사진 모델 비활성화 시 최소 1개 활성 모델 보장 (테마 모델은 제외)
+  if (data.enabled === false && isPhotoModel) {
     const dbSettings = await db.select().from(aiModelSettings);
     const settingsMap = new Map(dbSettings.map((s) => [s.modelId, s]));
 

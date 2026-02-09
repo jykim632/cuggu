@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/db';
-import { users, aiThemes } from '@/db/schema';
+import { users, aiThemes, aiModelSettings } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { checkCreditsFromUser, deductCredits, refundCredits } from '@/lib/ai/credits';
 import { generateTheme } from '@/lib/ai/theme-generation';
@@ -35,7 +35,18 @@ export async function POST(request: NextRequest) {
     }
     userId = user.id;
 
-    // 3. Rate limiting (10회/시간)
+    // 3. 테마 기능 활성화 확인
+    const themeSetting = await db.query.aiModelSettings.findFirst({
+      where: eq(aiModelSettings.modelId, 'theme-claude-sonnet'),
+    });
+    if (themeSetting?.enabled === false) {
+      return NextResponse.json(
+        { error: '테마 생성 기능이 비활성화되어 있습니다' },
+        { status: 403 }
+      );
+    }
+
+    // 4. Rate limiting (10회/시간)
     const rateLimitResult = await rateLimit(`ratelimit:ai-theme:${user.id}`, 10, 3600);
     if (!rateLimitResult.allowed) {
       return NextResponse.json(
@@ -44,7 +55,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. 요청 파싱
+    // 5. 요청 파싱
     const body = await request.json();
     const parsed = CreateRequestSchema.safeParse(body);
     if (!parsed.success) {
@@ -54,7 +65,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 5. 크레딧 확인
+    // 6. 크레딧 확인
     const isDev = process.env.NODE_ENV === 'development';
     if (!isDev) {
       const { hasCredits, balance } = checkCreditsFromUser(user);
@@ -66,10 +77,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 6. 크레딧 차감
+    // 7. 크레딧 차감
     await deductCredits(user.id, 1);
 
-    // 7. AI 테마 생성
+    // 8. AI 테마 생성
     let result;
     try {
       result = await generateTheme(parsed.data.prompt);
@@ -79,7 +90,7 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    // 8. DB 저장 (safelist 검증 전)
+    // 9. DB 저장 (safelist 검증 전)
     const cost = (result.usage.inputTokens * 3 + result.usage.outputTokens * 15) / 1_000_000;
 
     const safelistResult = checkThemeClasses(result.theme as unknown as Record<string, unknown>);
@@ -98,7 +109,7 @@ export async function POST(request: NextRequest) {
       cost,
     }).returning({ id: aiThemes.id });
 
-    // 9. 잔여 크레딧
+    // 10. 잔여 크레딧
     let remainingCredits = 999;
     if (!isDev) {
       const updatedUser = await db.query.users.findFirst({
