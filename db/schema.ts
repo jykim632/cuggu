@@ -311,6 +311,7 @@ export const aiThemes = pgTable('ai_themes', {
   userId: varchar('user_id', { length: 128 }).notNull().references(() => users.id, { onDelete: 'cascade' }),
   invitationId: varchar('invitation_id', { length: 128 }).references(() => invitations.id, { onDelete: 'cascade' }),
   prompt: text('prompt').notNull(),
+  modelId: varchar('model_id', { length: 64 }),
   theme: jsonb('theme').notNull(),
   status: aiThemeStatusEnum('status').default('completed').notNull(),
   failReason: text('fail_reason'),

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Sparkles, Zap, Shield, Star, Loader2, Brain, Video, Palette } from "lucide-react";
+import { Sparkles, Zap, Shield, Star, Loader2, Brain, Video, Palette, DollarSign, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ── Types ──
@@ -20,10 +20,21 @@ interface AIModelWithSettings {
   updatedAt: string | null;
 }
 
-interface ThemeModelSetting {
-  modelId: string;
-  enabled: boolean;
-  updatedAt: string | null;
+interface ThemeModelInfo {
+  id: string;
+  name: string;
+  provider: string;
+  providerType: string;
+  providerModel: string;
+  inputCostPerMTok: number;
+  outputCostPerMTok: number;
+  description: string;
+  speed: "fast" | "medium" | "slow";
+}
+
+interface ThemeConfig {
+  fastModelId: string;
+  qualityModelId: string;
 }
 
 type Tab = "photo" | "video" | "theme";
@@ -49,14 +60,143 @@ const SPEED_BADGES: Record<string, { label: string; color: string }> = {
   slow: { label: "느림", color: "bg-red-100 text-red-700" },
 };
 
+// ── Toggle Switch ──
+
+function ToggleSwitch({
+  checked,
+  disabled,
+  loading,
+  onToggle,
+  title,
+  activeColor = "bg-stone-900",
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  loading?: boolean;
+  onToggle: () => void;
+  title?: string;
+  activeColor?: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled || loading}
+      onClick={onToggle}
+      title={title}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+        checked ? activeColor : "bg-stone-300"
+      }`}
+    >
+      <span
+        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+          checked ? "translate-x-6" : "translate-x-1"
+        }`}
+      />
+    </button>
+  );
+}
+
+// ── Theme Radio Group ──
+
+function ThemeModelRadioGroup({
+  label,
+  description,
+  icon: Icon,
+  models,
+  selectedId,
+  onSelect,
+  disabled,
+}: {
+  label: string;
+  description: string;
+  icon: typeof Zap;
+  models: ThemeModelInfo[];
+  selectedId: string;
+  onSelect: (modelId: string) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="bg-white rounded-xl border border-stone-200 p-5 space-y-4">
+      <div className="flex items-center gap-2">
+        <Icon className="w-4 h-4 text-violet-600" />
+        <div>
+          <h4 className="text-sm font-semibold text-stone-900">{label}</h4>
+          <p className="text-xs text-stone-500">{description}</p>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {models.map((model) => {
+          const isSelected = model.id === selectedId;
+          const speedBadge = SPEED_BADGES[model.speed];
+          const estimatedCost = (
+            (1500 * model.inputCostPerMTok + 3000 * model.outputCostPerMTok) / 1_000_000
+          ).toFixed(4);
+
+          return (
+            <button
+              key={model.id}
+              type="button"
+              disabled={disabled}
+              onClick={() => onSelect(model.id)}
+              className={cn(
+                "w-full flex items-center gap-3 px-4 py-3 rounded-lg border text-left transition-all",
+                isSelected
+                  ? "border-violet-300 bg-violet-50/50 ring-1 ring-violet-300"
+                  : "border-stone-100 hover:border-stone-200 hover:bg-stone-50/50",
+                disabled && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              {/* 라디오 */}
+              <div className="flex-shrink-0">
+                {isSelected ? (
+                  <div className="w-5 h-5 bg-violet-500 rounded-full flex items-center justify-center">
+                    <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                  </div>
+                ) : (
+                  <div className="w-5 h-5 rounded-full border-2 border-stone-300" />
+                )}
+              </div>
+
+              {/* 모델 정보 */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-stone-900">{model.name}</span>
+                  <span className="text-xs text-stone-400">{model.provider}</span>
+                </div>
+                <p className="text-xs text-stone-500 mt-0.5">{model.description}</p>
+              </div>
+
+              {/* 뱃지 */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className="text-xs font-medium text-stone-700 bg-stone-100 px-2 py-0.5 rounded">
+                  ~${estimatedCost}
+                </span>
+                <span className={`text-xs px-2 py-0.5 rounded ${speedBadge.color}`}>
+                  <Zap className="w-3 h-3 inline mr-0.5" />
+                  {speedBadge.label}
+                </span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Page ──
 
 export default function AdminAIModelsPage() {
   const [tab, setTab] = useState<Tab>("photo");
   const [models, setModels] = useState<AIModelWithSettings[]>([]);
-  const [themeModel, setThemeModel] = useState<ThemeModelSetting | null>(null);
+  const [themeModels, setThemeModels] = useState<ThemeModelInfo[]>([]);
+  const [themeConfig, setThemeConfig] = useState<ThemeConfig>({ fastModelId: "", qualityModelId: "" });
   const [isLoading, setIsLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [savingThemeConfig, setSavingThemeConfig] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchModels = useCallback(async () => {
@@ -65,7 +205,8 @@ export default function AdminAIModelsPage() {
       const data = await res.json();
       if (data.success) {
         setModels(data.data.models);
-        setThemeModel(data.data.themeModel);
+        setThemeModels(data.data.themeModels);
+        setThemeConfig(data.data.themeConfig);
       }
     } catch {
       setError("모델 목록을 불러올 수 없습니다");
@@ -95,13 +236,9 @@ export default function AdminAIModelsPage() {
       const data = await res.json();
 
       if (data.success) {
-        if (modelId === "theme-claude-sonnet") {
-          setThemeModel((prev) => prev ? { ...prev, [field]: value } : prev);
-        } else {
-          setModels((prev) =>
-            prev.map((m) => (m.id === modelId ? { ...m, [field]: value } : m))
-          );
-        }
+        setModels((prev) =>
+          prev.map((m) => (m.id === modelId ? { ...m, [field]: value } : m))
+        );
       } else {
         setError(data.error?.message || "업데이트 실패");
       }
@@ -112,7 +249,37 @@ export default function AdminAIModelsPage() {
     }
   };
 
-  const enabledCount = models.filter((m) => m.enabled).length;
+  const handleThemeConfigChange = async (field: "fastModelId" | "qualityModelId", modelId: string) => {
+    const newConfig = { ...themeConfig, [field]: modelId };
+    setThemeConfig(newConfig);
+    setSavingThemeConfig(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/admin/ai-models", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "theme_config",
+          ...newConfig,
+        }),
+      });
+      const data = await res.json();
+
+      if (!data.success) {
+        setError(data.error?.message || "테마 설정 저장 실패");
+        // rollback
+        setThemeConfig(themeConfig);
+      }
+    } catch {
+      setError("서버 연결 실패");
+      setThemeConfig(themeConfig);
+    } finally {
+      setSavingThemeConfig(false);
+    }
+  };
+
+  const enabledPhotoCount = models.filter((m) => m.enabled).length;
 
   return (
     <div className="space-y-6">
@@ -165,7 +332,7 @@ export default function AdminAIModelsPage() {
                 <Sparkles className="w-4 h-4" />
                 <span>
                   전체 {models.length}개 모델 중{" "}
-                  <span className="font-medium text-stone-900">{enabledCount}개</span>{" "}
+                  <span className="font-medium text-stone-900">{enabledPhotoCount}개</span>{" "}
                   활성화
                 </span>
               </div>
@@ -174,7 +341,7 @@ export default function AdminAIModelsPage() {
                 const faceBadge = FACE_BADGES[model.facePreservation];
                 const speedBadge = SPEED_BADGES[model.speed];
                 const isUpdating = updatingId === model.id;
-                const isLastEnabled = model.enabled && enabledCount <= 1;
+                const isLastEnabled = model.enabled && enabledPhotoCount <= 1;
 
                 return (
                   <div
@@ -228,57 +395,24 @@ export default function AdminAIModelsPage() {
                       <div className="flex flex-col items-end gap-3 shrink-0">
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-stone-500">활성화</span>
-                          <button
-                            type="button"
-                            role="switch"
-                            aria-checked={model.enabled}
-                            disabled={isUpdating || (isLastEnabled && model.enabled)}
-                            onClick={() =>
-                              handleToggle(model.id, "enabled", !model.enabled)
-                            }
-                            title={
-                              isLastEnabled && model.enabled
-                                ? "최소 1개의 모델은 활성화되어야 합니다"
-                                : undefined
-                            }
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-                              model.enabled ? "bg-stone-900" : "bg-stone-300"
-                            }`}
-                          >
-                            <span
-                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                model.enabled ? "translate-x-6" : "translate-x-1"
-                              }`}
-                            />
-                          </button>
+                          <ToggleSwitch
+                            checked={model.enabled}
+                            disabled={isLastEnabled && model.enabled}
+                            loading={isUpdating}
+                            onToggle={() => handleToggle(model.id, "enabled", !model.enabled)}
+                            title={isLastEnabled && model.enabled ? "최소 1개의 모델은 활성화되어야 합니다" : undefined}
+                          />
                         </div>
 
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-stone-500">추천</span>
-                          <button
-                            type="button"
-                            role="switch"
-                            aria-checked={model.isRecommended}
-                            disabled={isUpdating || !model.enabled}
-                            onClick={() =>
-                              handleToggle(
-                                model.id,
-                                "isRecommended",
-                                !model.isRecommended
-                              )
-                            }
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-                              model.isRecommended ? "bg-pink-500" : "bg-stone-300"
-                            }`}
-                          >
-                            <span
-                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                model.isRecommended
-                                  ? "translate-x-6"
-                                  : "translate-x-1"
-                              }`}
-                            />
-                          </button>
+                          <ToggleSwitch
+                            checked={model.isRecommended}
+                            disabled={!model.enabled}
+                            loading={isUpdating}
+                            onToggle={() => handleToggle(model.id, "isRecommended", !model.isRecommended)}
+                            activeColor="bg-pink-500"
+                          />
                         </div>
                       </div>
                     </div>
@@ -306,67 +440,40 @@ export default function AdminAIModelsPage() {
           )}
 
           {/* 테마 생성 탭 */}
-          {tab === "theme" && themeModel && (
-            <div className="bg-white rounded-xl border border-stone-200 p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <Brain className="w-5 h-5 text-violet-600" />
-                    <h3 className="text-base font-semibold text-stone-900">
-                      AI 테마 생성
-                    </h3>
-                  </div>
-                  <p className="mt-1 text-sm text-stone-500">
-                    사용자가 프롬프트로 커스텀 테마를 생성할 수 있는 기능입니다
-                  </p>
-
-                  <div className="mt-4 space-y-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="text-stone-500 w-24">모델</span>
-                      <span className="text-stone-900 font-mono text-xs bg-stone-100 px-2 py-0.5 rounded">
-                        claude-sonnet-4-5-20250929
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-stone-500 w-24">비용</span>
-                      <span className="text-stone-700">~$0.018 / 생성</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-stone-500 w-24">크레딧</span>
-                      <span className="text-stone-700">1 크레딧 / 생성</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-xs text-stone-500">활성화</span>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={themeModel.enabled}
-                    disabled={updatingId === "theme-claude-sonnet"}
-                    onClick={() =>
-                      handleToggle("theme-claude-sonnet", "enabled", !themeModel.enabled)
-                    }
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-                      themeModel.enabled ? "bg-stone-900" : "bg-stone-300"
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        themeModel.enabled ? "translate-x-6" : "translate-x-1"
-                      }`}
-                    />
-                  </button>
-                </div>
+          {tab === "theme" && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm text-stone-500">
+                <Brain className="w-4 h-4" />
+                <span>
+                  사용자에게{" "}
+                  <span className="font-medium text-stone-900">빠른 생성</span>과{" "}
+                  <span className="font-medium text-stone-900">정밀 생성</span>{" "}
+                  옵션이 제공됩니다
+                </span>
+                {savingThemeConfig && (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-violet-500 ml-auto" />
+                )}
               </div>
 
-              {themeModel.updatedAt && (
-                <p className="mt-4 text-[10px] text-stone-400">
-                  마지막 수정:{" "}
-                  {new Date(themeModel.updatedAt).toLocaleString("ko-KR")}
-                </p>
-              )}
+              <ThemeModelRadioGroup
+                label="빠른 생성 모델"
+                description="사용자가 '빠른 생성'을 선택했을 때 사용할 모델"
+                icon={Zap}
+                models={themeModels}
+                selectedId={themeConfig.fastModelId}
+                onSelect={(id) => handleThemeConfigChange("fastModelId", id)}
+                disabled={savingThemeConfig}
+              />
+
+              <ThemeModelRadioGroup
+                label="정밀 생성 모델"
+                description="사용자가 '정밀 생성'을 선택했을 때 사용할 모델"
+                icon={Sparkles}
+                models={themeModels}
+                selectedId={themeConfig.qualityModelId}
+                onSelect={(id) => handleThemeConfigChange("qualityModelId", id)}
+                disabled={savingThemeConfig}
+              />
             </div>
           )}
         </>
