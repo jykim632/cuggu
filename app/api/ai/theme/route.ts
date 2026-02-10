@@ -42,7 +42,7 @@ async function resolveThemeModel(mode: ThemeMode = 'fast'): Promise<AIThemeModel
 // ── POST: 테마 생성 ──
 
 const CreateRequestSchema = z.object({
-  prompt: z.string().min(2, '프롬프트는 2자 이상 입력해주세요').max(200, '프롬프트는 200자 이내로 입력해주세요'),
+  prompt: z.string().min(2, '프롬프트는 2자 이상 입력해주세요').max(250, '프롬프트는 250자 이내로 입력해주세요'),
   invitationId: z.string().optional(),
   mode: z.enum(['fast', 'quality']).optional(),
 });
@@ -150,8 +150,21 @@ export async function POST(request: NextRequest) {
     try {
       result = await generateTheme(enhancedPrompt, themeModel);
     } catch (error) {
-      // Zod 파싱 실패(구조적 결함) — 크레딧 환불, 저장 안 함
+      // 생성 실패 — 크레딧 환불 + DB에 실패 기록 (API 비용은 이미 발생)
       await refundCredits(user.id, 1);
+
+      const failMessage = error instanceof Error ? error.message : String(error);
+      await db.insert(aiThemes).values({
+        userId: user.id,
+        invitationId: parsed.data.invitationId || null,
+        prompt: parsed.data.prompt,
+        modelId: themeModel.id,
+        theme: null,
+        status: 'failed',
+        failReason: failMessage.slice(0, 2000),
+        creditsUsed: 0,
+      }).catch(() => {}); // DB 기록 실패해도 원래 에러 유지
+
       throw error;
     }
 

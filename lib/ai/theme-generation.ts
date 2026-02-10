@@ -44,6 +44,63 @@ const ENUM_CORRECTIONS: Record<string, Record<string, string>> = {
     lines_with_ampersand: 'lines-with-ampersand',
     'lines with ampersand': 'lines-with-ampersand',
   },
+  galleryLayout: {
+    grid_2: 'grid-2', grid_3: 'grid-3', grid_2_1: 'grid-2-1',
+    'grid 2 1': 'grid-2-1', single_column: 'single-column', 'single column': 'single-column',
+  },
+  parentsLayout: {
+    side_by_side: 'side-by-side', 'side by side': 'side-by-side',
+  },
+  greetingLayout: {
+    left_aligned: 'left-aligned', 'left aligned': 'left-aligned',
+    quote_style: 'quote-style', 'quote style': 'quote-style',
+  },
+  ceremonyLayout: {},
+  sectionSpacing: {},
+};
+
+// 교정 후에도 유효하지 않은 값 → 안전한 기본값으로 폴백
+const ENUM_VALID_VALUES: Record<string, { values: Set<string>; fallback: string }> = {
+  type: {
+    values: new Set([
+      'none', 'emoji', 'symbol-with-lines', 'diamond-with-lines', 'text-label',
+      'horizontal-line', 'vertical-line', 'gradient-line',
+      'default', 'with-decoration', 'with-sub-label',
+    ]),
+    fallback: 'none',
+  },
+  preset: {
+    values: new Set(['fade', 'slide-x-left', 'slide-x-right', 'slide-y', 'scale', 'fade-scale']),
+    fallback: 'fade',
+  },
+  layout: {
+    values: new Set(['center', 'bottom-left', 'centered', 'flex-between']),
+    fallback: 'center',
+  },
+  nameDivider: {
+    values: new Set(['ampersand', 'lines-only', 'lines-with-ampersand']),
+    fallback: 'ampersand',
+  },
+  galleryLayout: {
+    values: new Set(['grid-2', 'grid-3', 'grid-2-1', 'single-column', 'masonry']),
+    fallback: 'grid-2',
+  },
+  parentsLayout: {
+    values: new Set(['side-by-side', 'stacked', 'compact', 'cards']),
+    fallback: 'side-by-side',
+  },
+  greetingLayout: {
+    values: new Set(['centered', 'left-aligned', 'quote-style']),
+    fallback: 'centered',
+  },
+  ceremonyLayout: {
+    values: new Set(['cards', 'centered', 'inline', 'timeline']),
+    fallback: 'cards',
+  },
+  sectionSpacing: {
+    values: new Set(['compact', 'normal', 'spacious']),
+    fallback: 'normal',
+  },
 };
 
 function sanitizeEnums(obj: unknown): unknown {
@@ -53,7 +110,12 @@ function sanitizeEnums(obj: unknown): unknown {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
     if (typeof value === 'string' && ENUM_CORRECTIONS[key]) {
-      result[key] = ENUM_CORRECTIONS[key][value] ?? value;
+      const corrected = ENUM_CORRECTIONS[key][value] ?? value;
+      const valid = ENUM_VALID_VALUES[key];
+      result[key] = valid && !valid.values.has(corrected) ? valid.fallback : corrected;
+    } else if (typeof value === 'string' && ENUM_VALID_VALUES[key]) {
+      const valid = ENUM_VALID_VALUES[key];
+      result[key] = valid.values.has(value) ? value : valid.fallback;
     } else if (typeof value === 'object' && value !== null) {
       result[key] = sanitizeEnums(value);
     } else {
@@ -61,6 +123,17 @@ function sanitizeEnums(obj: unknown): unknown {
     }
   }
   return result;
+}
+
+function pick<T>(arr: readonly T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function generateLayoutSeed(): string {
+  const gallery = pick(['grid-2', 'grid-3', 'grid-2-1', 'single-column', 'masonry'] as const);
+  const ceremony = pick(['cards', 'centered', 'inline', 'timeline'] as const);
+  const cover = pick(['center', 'bottom-left'] as const);
+  return `\n\n[Layout Hint: galleryLayout=${gallery}, ceremonyLayout=${ceremony}, cover.layout=${cover}]`;
 }
 
 export interface ThemeGenerationResult {
@@ -87,7 +160,7 @@ export async function generateTheme(
 
   const result = await provider.generateTheme({
     systemPrompt: THEME_SYSTEM_PROMPT,
-    userPrompt: `다음 컨셉으로 웨딩 청첩장 테마를 만들어주세요: ${userPrompt}`,
+    userPrompt: `다음 컨셉으로 웨딩 청첩장 테마를 만들어주세요: ${userPrompt}${generateLayoutSeed()}`,
     jsonSchema,
     model,
   });

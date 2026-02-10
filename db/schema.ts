@@ -78,6 +78,7 @@ export const aiGenerationStatusEnum = pgEnum('ai_generation_status', [
 export const aiThemeStatusEnum = pgEnum('ai_theme_status', [
   'completed',
   'safelist_failed',
+  'failed',
 ]);
 
 export const paymentTypeEnum = pgEnum('payment_type', [
@@ -312,7 +313,7 @@ export const aiThemes = pgTable('ai_themes', {
   invitationId: varchar('invitation_id', { length: 128 }).references(() => invitations.id, { onDelete: 'cascade' }),
   prompt: text('prompt').notNull(),
   modelId: varchar('model_id', { length: 64 }),
-  theme: jsonb('theme').notNull(),
+  theme: jsonb('theme'),
   status: aiThemeStatusEnum('status').default('completed').notNull(),
   failReason: text('fail_reason'),
   creditsUsed: integer('credits_used').default(1).notNull(),

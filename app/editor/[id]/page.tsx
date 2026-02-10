@@ -1,13 +1,12 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import { useInvitationEditor } from '@/stores/invitation-editor';
 import { TopBar } from '@/components/editor/TopBar';
 import { SectionPanel } from '@/components/editor/SectionPanel';
 import { EditorPanel } from '@/components/editor/EditorPanel';
 import { PreviewPanel } from '@/components/editor/PreviewPanel';
-import { OnboardingWizard, type OnboardingData } from '@/components/editor/OnboardingWizard';
 
 /**
  * Figma 스타일 청첩장 편집기
@@ -18,33 +17,19 @@ import { OnboardingWizard, type OnboardingData } from '@/components/editor/Onboa
  * - 중앙: EditorPanel (편집 폼)
  * - 우측: PreviewPanel (실시간 미리보기)
  */
-
-// 신규 초대장 (플레이스홀더 그대로) 여부 판별
-function isNewWithDefaults(inv: Record<string, any>): boolean {
-  const hasDefaultGroom = !inv.groom?.name || inv.groom.name === '신랑';
-  const hasDefaultBride = !inv.bride?.name || inv.bride.name === '신부';
-  const hasDefaultVenue = !inv.wedding?.venue?.name || inv.wedding.venue.name === '예식장';
-  return hasDefaultGroom && hasDefaultBride && hasDefaultVenue;
-}
-
 export default function InvitationEditorPage() {
   const params = useParams();
-  const searchParams = useSearchParams();
   const id = params.id as string;
-  const forceOnboarding = searchParams.get('onboarding') === '1';
 
   const {
     invitation,
     setInvitation,
     updateInvitation,
-    setActiveTab,
     activeTab,
     isSaving,
     lastSaved,
     reset,
   } = useInvitationEditor();
-
-  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // 청첩장 데이터 로드
   useEffect(() => {
@@ -63,12 +48,6 @@ export default function InvitationEditorPage() {
           console.log('[Editor] templateId:', result.data.templateId);
           console.log('[Editor] venue:', result.data.wedding?.venue);
           setInvitation(result.data);
-
-          // 온보딩 위자드 표시 판별
-          const ext = (result.data.extendedData as Record<string, unknown>) || {};
-          if (forceOnboarding || (!ext.onboardingCompleted && isNewWithDefaults(result.data))) {
-            setShowOnboarding(true);
-          }
         }
       } catch (error) {
         console.error('청첩장 로드 실패:', error);
@@ -89,7 +68,6 @@ export default function InvitationEditorPage() {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         });
-        setShowOnboarding(true);
       }
     }
 
@@ -101,41 +79,7 @@ export default function InvitationEditorPage() {
     return () => {
       reset();
     };
-  }, [id, setInvitation, reset, forceOnboarding]);
-
-  // 온보딩 완료
-  const handleOnboardingComplete = useCallback((data: OnboardingData) => {
-    const ext = (invitation.extendedData as Record<string, unknown>) || {};
-
-    updateInvitation({
-      templateId: data.templateId,
-      groom: { ...invitation.groom, name: data.groomName },
-      bride: { ...invitation.bride, name: data.brideName },
-      wedding: {
-        ...invitation.wedding,
-        date: data.weddingDate,
-        venue: {
-          ...invitation.wedding?.venue,
-          name: data.venueName,
-        },
-      },
-      extendedData: { ...ext, onboardingCompleted: true },
-    });
-
-    setShowOnboarding(false);
-    setActiveTab('template');
-  }, [invitation, updateInvitation, setActiveTab]);
-
-  // 온보딩 건너뛰기
-  const handleOnboardingSkip = useCallback(() => {
-    const ext = (invitation.extendedData as Record<string, unknown>) || {};
-
-    updateInvitation({
-      extendedData: { ...ext, onboardingCompleted: true },
-    });
-
-    setShowOnboarding(false);
-  }, [invitation, updateInvitation]);
+  }, [id, setInvitation, reset]);
 
   // 로딩 중
   if (!invitation.id) {
@@ -170,13 +114,6 @@ export default function InvitationEditorPage() {
         {/* 우측: 실시간 미리보기 */}
         <PreviewPanel invitation={invitation} />
       </div>
-
-      {/* 온보딩 위자드 */}
-      <OnboardingWizard
-        isOpen={showOnboarding}
-        onComplete={handleOnboardingComplete}
-        onSkip={handleOnboardingSkip}
-      />
     </>
   );
 }

@@ -129,7 +129,7 @@ export function AccountsSection({ data, theme }: AccountsSectionProps) {
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          className={theme.ceremonyCentered ? 'text-center' : ''}
+          className={(theme.ceremonyLayout === 'centered' || theme.ceremonyCentered) ? 'text-center' : ''}
         >
           {theme.accountsHeading ? (
             <HeadingRenderer config={theme.accountsHeading} fallbackClass={theme.headingClass}>

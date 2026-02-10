@@ -27,7 +27,7 @@ export function MapInfoSection({ data, theme }: MapInfoSectionProps) {
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
-          className={theme.ceremonyCentered ? 'text-center' : ''}
+          className={(theme.ceremonyLayout === 'centered' || theme.ceremonyCentered) ? 'text-center' : ''}
         >
           {theme.mapHeading ? (
             <HeadingRenderer config={theme.mapHeading} fallbackClass={theme.headingClass}>

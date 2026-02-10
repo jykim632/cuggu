@@ -11,6 +11,9 @@ interface GreetingSectionProps {
 }
 
 export function GreetingSection({ data, theme }: GreetingSectionProps) {
+  const alignClass = resolveGreetingAlign(theme);
+  const isQuote = theme.greetingLayout === 'quote-style';
+
   return (
     <section
       className={`flex items-center justify-center ${theme.sectionPadding}`}
@@ -21,15 +24,15 @@ export function GreetingSection({ data, theme }: GreetingSectionProps) {
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
-          className={theme.greetingAlign}
+          className={alignClass}
         >
           {theme.greetingDecorTop && (
             <div className="mb-8"><DecorationRenderer config={theme.greetingDecorTop} /></div>
           )}
 
           <div className="space-y-4 md:space-y-6">
-            <p className={theme.bodyText}>
-              {data.content.greeting}
+            <p className={`${theme.bodyText} ${isQuote ? 'italic font-serif' : ''}`}>
+              {isQuote ? '\u201C' : ''}{data.content.greeting}{isQuote ? '\u201D' : ''}
             </p>
           </div>
 
@@ -40,4 +43,13 @@ export function GreetingSection({ data, theme }: GreetingSectionProps) {
       </div>
     </section>
   );
+}
+
+function resolveGreetingAlign(theme: SerializableTheme): string {
+  switch (theme.greetingLayout) {
+    case 'left-aligned': return 'text-left';
+    case 'quote-style': return 'text-center';
+    case 'centered': return 'text-center';
+    default: return theme.greetingAlign;
+  }
 }

@@ -202,6 +202,14 @@ export interface SerializableTheme {
   transportLabelClass: string;
   transportTextClass: string;
 
+  // ── 레이아웃 다양성 ──
+  galleryLayout?: 'grid-2' | 'grid-3' | 'grid-2-1' | 'single-column' | 'masonry';
+  parentsLayout?: 'side-by-side' | 'stacked' | 'compact' | 'cards';
+  parentsFullHeight?: boolean;
+  greetingLayout?: 'centered' | 'left-aligned' | 'quote-style';
+  ceremonyLayout?: 'cards' | 'centered' | 'inline' | 'timeline';
+  sectionSpacing?: 'compact' | 'normal' | 'spacious';
+
   // ── 예식 정보 ──
   ceremonyCentered?: boolean;
   ceremonyHeading?: HeadingConfig;

@@ -94,7 +94,7 @@ for (const opacity of OPACITIES) {
 // 레이아웃/타이포/유틸 (AI가 자주 사용할 안전한 클래스)
 const UTILITY_CLASSES = [
   // font
-  'font-serif', 'font-sans', 'font-mono', 'font-thin', 'font-extralight', 'font-light', 'font-normal', 'font-medium', 'font-semibold', 'font-bold',
+  'font-serif', 'font-sans', 'font-mono', 'font-batang', 'font-myeongjo', 'font-thin', 'font-extralight', 'font-light', 'font-normal', 'font-medium', 'font-semibold', 'font-bold',
   // text size
   'text-xs', 'text-sm', 'text-base', 'text-lg', 'text-xl', 'text-2xl', 'text-3xl', 'text-4xl', 'text-5xl',
   'text-[8px]', 'text-[10px]', 'text-[11px]',
@@ -131,8 +131,13 @@ const UTILITY_CLASSES = [
   'max-w-xs', 'max-w-sm', 'max-w-md', 'max-w-lg', 'max-w-xl', 'max-w-2xl', 'max-w-3xl', 'max-w-4xl',
   // flex/grid
   'flex', 'flex-1', 'flex-col', 'flex-wrap', 'inline-flex', 'items-center', 'items-start', 'items-end', 'justify-center', 'justify-between', 'justify-start', 'justify-end',
-  'grid', 'grid-cols-2', 'grid-cols-3',
+  'grid', 'grid-cols-1', 'grid-cols-2', 'grid-cols-3',
   'md:grid-cols-2', 'md:grid-cols-3',
+  'col-span-2',
+  'columns-2', 'columns-3', 'md:columns-3',
+  'break-inside-avoid',
+  'border-l-2',
+  'h-auto',
   // display
   'inline-block', 'inline', 'block', 'hidden',
   // position

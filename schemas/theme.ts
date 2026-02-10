@@ -143,6 +143,14 @@ export const SerializableThemeSchema = z.object({
   transportLabelClass: z.string(),
   transportTextClass: z.string(),
 
+  // ── 레이아웃 다양성 ──
+  galleryLayout: z.enum(['grid-2', 'grid-3', 'grid-2-1', 'single-column', 'masonry']).optional(),
+  parentsLayout: z.enum(['side-by-side', 'stacked', 'compact', 'cards']).optional(),
+  parentsFullHeight: z.boolean().optional(),
+  greetingLayout: z.enum(['centered', 'left-aligned', 'quote-style']).optional(),
+  ceremonyLayout: z.enum(['cards', 'centered', 'inline', 'timeline']).optional(),
+  sectionSpacing: z.enum(['compact', 'normal', 'spacious']).optional(),
+
   // 예식 정보
   ceremonyCentered: z.boolean().optional(),
   ceremonyHeading: HeadingConfigSchema.optional(),

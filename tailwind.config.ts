@@ -49,6 +49,12 @@ export default {
   safelist,
   theme: {
   	extend: {
+  		fontFamily: {
+  			sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+  			serif: ['var(--font-serif)', 'Georgia', 'serif'],
+  			batang: ['var(--font-batang)', 'var(--font-serif)', 'serif'],
+  			myeongjo: ['var(--font-myeongjo)', 'var(--font-serif)', 'serif'],
+  		},
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',

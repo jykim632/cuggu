@@ -150,13 +150,140 @@ function CeremonyCards({ data, theme, fullDateStr, weddingDate, calendarStyle }:
   );
 }
 
+/** 인라인 레이아웃: 아이콘 + 텍스트 가로 나열, 카드 래핑 없음 */
+function CeremonyInline({ data, theme, fullDateStr, weddingDate, calendarStyle }: CeremonyInnerProps) {
+  return (
+    <section className={theme.sectionPadding}>
+      <div className={theme.contentMaxWidth}>
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          className="space-y-6"
+        >
+          {theme.ceremonyHeading && (
+            <HeadingRenderer config={theme.ceremonyHeading} fallbackClass={theme.headingClass}>
+              Ceremony
+            </HeadingRenderer>
+          )}
+
+          <div className="flex items-center gap-3">
+            <Calendar className={`w-5 h-5 ${theme.iconColor} flex-shrink-0`} />
+            <div>
+              <span className={`${theme.cardLabelClass} mr-2`}>{theme.ceremonyDateLabel}</span>
+              <span className={theme.cardValueClass}>{fullDateStr}</span>
+            </div>
+          </div>
+
+          {calendarStyle !== 'none' && (
+            <DDayWidget weddingDate={weddingDate} theme={theme} style={calendarStyle as 'calendar' | 'countdown' | 'minimal'} />
+          )}
+
+          <div className="flex items-center gap-3">
+            <MapPin className={`w-5 h-5 ${theme.iconColor} flex-shrink-0`} />
+            <div>
+              <span className={`${theme.cardLabelClass} mr-2`}>{theme.ceremonyVenueLabel}</span>
+              <span className={theme.cardValueClass}>
+                {data.wedding.venue.name}
+                {data.wedding.venue.hall && ` ${data.wedding.venue.hall}`}
+              </span>
+              <p className={`${theme.cardSubTextClass} mt-1`}>{data.wedding.venue.address}</p>
+            </div>
+          </div>
+
+          {data.content.notice && (
+            <div className={theme.noticeBg}>
+              <p className={theme.noticeTextClass}>{data.content.notice}</p>
+            </div>
+          )}
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+/** 타임라인 레이아웃: 세로 타임라인 with dot markers */
+function CeremonyTimeline({ data, theme, fullDateStr, weddingDate, calendarStyle }: CeremonyInnerProps) {
+  return (
+    <section className={theme.sectionPadding}>
+      <div className={theme.contentMaxWidth}>
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+        >
+          {theme.ceremonyHeading && (
+            <HeadingRenderer config={theme.ceremonyHeading} fallbackClass={theme.headingClass}>
+              Ceremony
+            </HeadingRenderer>
+          )}
+
+          <div className="relative border-l-2 border-gray-200 ml-3 space-y-8 pl-6">
+            {/* 날짜 */}
+            <div className="relative">
+              <div className={`absolute -left-[calc(0.75rem+1px)] top-1 w-3 h-3 rounded-full ${theme.iconColor.replace('text-', 'bg-')}`} />
+              <p className={`${theme.cardLabelClass} mb-1`}>{theme.ceremonyDateLabel}</p>
+              <p className={theme.cardValueClass}>{fullDateStr}</p>
+            </div>
+
+            {calendarStyle !== 'none' && (
+              <DDayWidget weddingDate={weddingDate} theme={theme} style={calendarStyle as 'calendar' | 'countdown' | 'minimal'} />
+            )}
+
+            {/* 장소 */}
+            <div className="relative">
+              <div className={`absolute -left-[calc(0.75rem+1px)] top-1 w-3 h-3 rounded-full ${theme.iconColor.replace('text-', 'bg-')}`} />
+              <p className={`${theme.cardLabelClass} mb-1`}>{theme.ceremonyVenueLabel}</p>
+              <p className={`${theme.cardValueClass} font-medium`}>
+                {data.wedding.venue.name}
+                {data.wedding.venue.hall && ` ${data.wedding.venue.hall}`}
+              </p>
+              <p className={`${theme.cardSubTextClass} mt-1`}>{data.wedding.venue.address}</p>
+              {data.wedding.venue.tel && (
+                <a
+                  href={`tel:${data.wedding.venue.tel}`}
+                  className={`inline-flex items-center gap-2 text-sm ${theme.accentColor} py-2 min-h-[44px]`}
+                >
+                  <Phone className="w-4 h-4" />
+                  {data.wedding.venue.tel}
+                </a>
+              )}
+            </div>
+
+            {/* 안내사항 */}
+            {data.content.notice && (
+              <div className="relative">
+                <div className={`absolute -left-[calc(0.75rem+1px)] top-1 w-3 h-3 rounded-full ${theme.iconColor.replace('text-', 'bg-')}`} />
+                <div className={theme.noticeBg}>
+                  <p className={theme.noticeTextClass}>{data.content.notice}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+function resolveCeremonyLayout(theme: SerializableTheme): 'cards' | 'centered' | 'inline' | 'timeline' {
+  if (theme.ceremonyLayout) return theme.ceremonyLayout;
+  if (theme.ceremonyCentered) return 'centered';
+  return 'cards';
+}
+
 export function CeremonySection({ data, theme }: CeremonySectionProps) {
   const weddingDate = new Date(data.wedding.date);
   const fullDateStr = formatWeddingDateTime(weddingDate);
   const calendarStyle = (data.settings?.calendarStyle as string) ?? 'calendar';
+  const layout = resolveCeremonyLayout(theme);
 
-  if (theme.ceremonyCentered) {
-    return <CeremonyCentered data={data} theme={theme} fullDateStr={fullDateStr} weddingDate={weddingDate} calendarStyle={calendarStyle} />;
+  const props = { data, theme, fullDateStr, weddingDate, calendarStyle };
+
+  switch (layout) {
+    case 'centered': return <CeremonyCentered {...props} />;
+    case 'inline': return <CeremonyInline {...props} />;
+    case 'timeline': return <CeremonyTimeline {...props} />;
+    default: return <CeremonyCards {...props} />;
   }
-  return <CeremonyCards data={data} theme={theme} fullDateStr={fullDateStr} weddingDate={weddingDate} calendarStyle={calendarStyle} />;
 }

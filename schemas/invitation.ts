@@ -196,7 +196,6 @@ export const ExtendedDataSchema = z.object({
     rsvp: z.boolean().optional(),
   }).optional(),
   customTheme: z.any().optional(),
-  onboardingCompleted: z.boolean().optional(),
 }).default({});
 
 export type ExtendedData = z.infer<typeof ExtendedDataSchema>;

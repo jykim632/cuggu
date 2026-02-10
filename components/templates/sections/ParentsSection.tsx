@@ -13,16 +13,28 @@ interface ParentsSectionProps {
   theme: SerializableTheme;
 }
 
+function resolveParentsGrid(theme: SerializableTheme): string {
+  switch (theme.parentsLayout) {
+    case 'stacked': return 'flex flex-col items-center space-y-8';
+    case 'compact': return 'grid grid-cols-2 gap-4';
+    case 'cards':
+    case 'side-by-side':
+    default: return theme.parentsGrid;
+  }
+}
+
 function PersonCard({
   person,
   side,
   theme,
   motionProps,
+  forceCardWrapper,
 }: {
   person: Invitation['groom'] | Invitation['bride'];
   side: 'groom' | 'bride';
   theme: SerializableTheme;
   motionProps: object;
+  forceCardWrapper?: boolean;
 }) {
   const roleLabel = side === 'groom' ? 'Groom' : 'Bride';
   const familyNameClass = theme.parentsRoleLabel
@@ -47,10 +59,13 @@ function PersonCard({
     </>
   );
 
+  const showCard = theme.parentsCardWrapper != null || forceCardWrapper;
+  const cardClass = theme.parentsCardWrapper ?? 'text-center p-6 bg-white/50 rounded-2xl';
+
   return (
     <motion.div {...motionProps} viewport={{ once: true }} className="text-center">
-      {theme.parentsCardWrapper ? (
-        <div className={theme.parentsCardWrapper}>{content}</div>
+      {showCard ? (
+        <div className={cardClass}>{content}</div>
       ) : (
         content
       )}
@@ -64,10 +79,16 @@ export function ParentsSection({ data, theme }: ParentsSectionProps) {
   const groomMotion = resolveAnimation(theme.groomAnimation);
   const brideMotion = resolveAnimation(theme.brideAnimation);
 
+  const fullHeight = theme.parentsLayout === 'compact'
+    ? false
+    : (theme.parentsFullHeight !== false);
+
+  const gridClass = resolveParentsGrid(theme);
+
   return (
     <section
-      className={`flex items-center justify-center ${theme.sectionPadding} ${theme.sectionBg.parents ?? ''}`}
-      style={{ minHeight: 'var(--screen-height, 100vh)' }}
+      className={`${fullHeight ? 'flex items-center justify-center' : ''} ${theme.sectionPadding} ${theme.sectionBg.parents ?? ''}`}
+      style={fullHeight ? { minHeight: 'var(--screen-height, 100vh)' } : undefined}
     >
       <div className={`${theme.contentMaxWidth} w-full`}>
         {theme.parentsHeading && (
@@ -75,18 +96,20 @@ export function ParentsSection({ data, theme }: ParentsSectionProps) {
             Bride &amp; Groom
           </HeadingRenderer>
         )}
-        <div className={theme.parentsGrid}>
+        <div className={gridClass}>
           <PersonCard
             person={data.groom}
             side="groom"
             theme={theme}
             motionProps={groomMotion}
+            forceCardWrapper={theme.parentsLayout === 'cards'}
           />
           <PersonCard
             person={data.bride}
             side="bride"
             theme={theme}
             motionProps={brideMotion}
+            forceCardWrapper={theme.parentsLayout === 'cards'}
           />
         </div>
       </div>

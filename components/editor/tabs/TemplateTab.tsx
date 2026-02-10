@@ -23,7 +23,7 @@ interface SavedTheme {
 
 // ── 미니 프리뷰 ──
 
-export function TemplateMiniPreview({ templateId }: { templateId: string }) {
+function TemplateMiniPreview({ templateId }: { templateId: string }) {
   switch (templateId) {
     case 'classic':
       return (
@@ -174,17 +174,6 @@ function formatRelativeTime(dateStr: string): string {
   return `${days}일 전`;
 }
 
-// ── 빌트인 템플릿 목록 ──
-
-export const BUILTIN_TEMPLATES = [
-  { id: 'classic', name: 'Classic', description: '전통적인 웨딩 스타일', tier: 'FREE' },
-  { id: 'modern', name: 'Modern', description: '대담한 타이포그래피', tier: 'FREE' },
-  { id: 'minimal', name: 'Minimal', description: '여백의 미, 흑백 톤', tier: 'FREE' },
-  { id: 'floral', name: 'Floral', description: '꽃무늬 파스텔 디자인', tier: 'FREE' },
-  { id: 'elegant', name: 'Elegant', description: '호텔웨딩 고급 스타일', tier: 'FREE' },
-  { id: 'natural', name: 'Natural', description: '가든웨딩 자연 스타일', tier: 'FREE' },
-] as const;
-
 // ── 메인 컴포넌트 ──
 
 export function TemplateTab() {
@@ -207,7 +196,14 @@ export function TemplateTab() {
 
   const isCustomActive = invitation.templateId === 'custom' && invitation.customTheme;
 
-  const templates = BUILTIN_TEMPLATES;
+  const templates = [
+    { id: 'classic', name: 'Classic', description: '전통적인 웨딩 스타일', tier: 'FREE' },
+    { id: 'modern', name: 'Modern', description: '대담한 타이포그래피', tier: 'FREE' },
+    { id: 'minimal', name: 'Minimal', description: '여백의 미, 흑백 톤', tier: 'FREE' },
+    { id: 'floral', name: 'Floral', description: '꽃무늬 파스텔 디자인', tier: 'FREE' },
+    { id: 'elegant', name: 'Elegant', description: '호텔웨딩 고급 스타일', tier: 'FREE' },
+    { id: 'natural', name: 'Natural', description: '가든웨딩 자연 스타일', tier: 'FREE' },
+  ];
 
   // ── 테마 라이브러리 fetch ──
 
@@ -283,10 +279,10 @@ export function TemplateTab() {
 
     // 컨텍스트 체크: 빠진 항목이 있으면 모달 표시
     const items = checkContextItems({
-      weddingDate: invitation.weddingDate,
-      venueName: invitation.venueName,
-      introMessage: invitation.introMessage,
-      galleryImages: invitation.galleryImages,
+      weddingDate: invitation.wedding?.date,
+      venueName: invitation.wedding?.venue?.name,
+      introMessage: invitation.content?.greeting,
+      galleryImages: invitation.gallery?.images,
     });
 
     const hasMissing = items.some((item) => !item.filled);
@@ -384,7 +380,7 @@ export function TemplateTab() {
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="예: 라벤더색 로맨틱한 봄 웨딩, 골드 포인트 고급스러운 느낌, 숲속 자연 느낌의 초록 톤..."
           className="w-full h-20 px-3 py-2 text-sm bg-white border border-violet-200 rounded-lg resize-none placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-transparent"
-          maxLength={200}
+          maxLength={250}
           disabled={isGenerating}
         />
 
@@ -394,7 +390,7 @@ export function TemplateTab() {
 
         <div className="flex items-center justify-between">
           <span className="text-xs text-stone-400">
-            {prompt.length}/200자 | 1 크레딧 소모
+            {prompt.length}/250자 | 1 크레딧 소모
           </span>
 
           <div className="flex items-center gap-2">
