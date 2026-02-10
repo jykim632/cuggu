@@ -44,10 +44,7 @@ export async function GET(
       );
     }
 
-    console.log('[GET] raw extendedData:', invitation.extendedData);
     const converted = dbRecordToInvitation(invitation as any);
-    console.log('[GET] converted templateId:', converted.templateId);
-    console.log('[GET] converted venue:', converted.wedding.venue);
     return NextResponse.json({
       success: true,
       data: converted,
@@ -121,11 +118,9 @@ export async function PUT(
     }
 
     const data = parsed.data;
-    console.log('[PUT] incoming venue:', data.wedding?.venue);
 
     // invitationToDbUpdate()로 flat 컬럼 + extendedData 분리
     const dbUpdate = invitationToDbUpdate(data);
-    console.log('[PUT] dbUpdate.extendedData:', dbUpdate.extendedData);
 
     // extendedData deep merge (기존 데이터 보존)
     if (dbUpdate.extendedData) {
