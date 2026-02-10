@@ -35,10 +35,10 @@ export function TopBar({ invitation, isSaving, lastSaved, saveError, onRetrySave
   const handlePublish = async () => {
     // 필수 필드 검증
     const missing: string[] = [];
-    if (!invitation.groom?.name || invitation.groom.name === '신랑') missing.push('신랑 이름');
-    if (!invitation.bride?.name || invitation.bride.name === '신부') missing.push('신부 이름');
+    if (!invitation.groom?.name) missing.push('신랑 이름');
+    if (!invitation.bride?.name) missing.push('신부 이름');
     if (!invitation.wedding?.date) missing.push('예식 날짜');
-    if (!invitation.wedding?.venue?.name || invitation.wedding.venue.name === '예식장') missing.push('예식장 이름');
+    if (!invitation.wedding?.venue?.name) missing.push('예식장 이름');
 
     if (missing.length > 0) {
       showToast(`필수 정보를 입력해주세요: ${missing.join(', ')}`, 'error');

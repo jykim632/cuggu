@@ -263,7 +263,7 @@ export const CreateInvitationSchema = z.object({
   templateId: z.string().min(1, "템플릿을 선택해주세요"),
 
   groom: z.object({
-    name: z.string().min(1, "신랑 이름을 입력해주세요"),
+    name: z.string(), // 생성 시 빈 문자열 허용 (발행 시 검증)
     fatherName: z.string().optional(),
     motherName: z.string().optional(),
     isDeceased: z.object({
@@ -278,7 +278,7 @@ export const CreateInvitationSchema = z.object({
   }),
 
   bride: z.object({
-    name: z.string().min(1, "신부 이름을 입력해주세요"),
+    name: z.string(), // 생성 시 빈 문자열 허용 (발행 시 검증)
     fatherName: z.string().optional(),
     motherName: z.string().optional(),
     isDeceased: z.object({
@@ -294,7 +294,10 @@ export const CreateInvitationSchema = z.object({
 
   wedding: z.object({
     date: z.string().datetime("올바른 날짜 형식을 입력해주세요"),
-    venue: VenueSchema,
+    venue: VenueSchema.extend({
+      name: z.string(),    // 생성 시 빈 문자열 허용
+      address: z.string(), // 생성 시 빈 문자열 허용
+    }),
   }),
 
   content: z.object({

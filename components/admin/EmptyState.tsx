@@ -21,18 +21,18 @@ export function EmptyState() {
         body: JSON.stringify({
           templateId: "classic",
           groom: {
-            name: "신랑",
+            name: "",
           },
           bride: {
-            name: "신부",
+            name: "",
           },
           wedding: {
             date: new Date(
               new Date().setMonth(new Date().getMonth() + 3)
             ).toISOString(), // 3개월 후
             venue: {
-              name: "예식장",
-              address: "주소를 입력하세요",
+              name: "",
+              address: "",
             },
           },
           content: {

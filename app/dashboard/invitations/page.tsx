@@ -55,18 +55,18 @@ export default function InvitationsPage() {
         body: JSON.stringify({
           templateId: "classic",
           groom: {
-            name: "신랑",
+            name: "",
           },
           bride: {
-            name: "신부",
+            name: "",
           },
           wedding: {
             date: new Date(
               new Date().setMonth(new Date().getMonth() + 3)
             ).toISOString(),
             venue: {
-              name: "예식장",
-              address: "주소를 입력하세요",
+              name: "",
+              address: "",
             },
           },
           content: {
