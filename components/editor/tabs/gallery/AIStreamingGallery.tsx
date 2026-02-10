@@ -27,7 +27,7 @@ export function AIStreamingGallery({
     <>
       <div className="space-y-4 rounded-xl border border-stone-200 bg-white p-5">
         {/* Header with Original Image */}
-        <div className="flex items-start gap-4">
+        <div className="flex flex-col sm:flex-row items-start gap-4">
           {/* 원본 이미지 */}
           {originalImage && (
             <div className="flex-shrink-0">

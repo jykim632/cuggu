@@ -332,7 +332,7 @@ export function TemplateTab() {
       </div>
 
       {/* AI 테마 생성기 */}
-      <div className="bg-gradient-to-br from-violet-50 to-pink-50 rounded-xl p-6 space-y-4 border border-violet-200">
+      <div className="bg-gradient-to-br from-violet-50 to-pink-50 rounded-xl p-4 md:p-6 space-y-4 border border-violet-200">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-pink-500 rounded-lg flex items-center justify-center">
             <Wand2 className="w-4 h-4 text-white" />
@@ -545,7 +545,7 @@ export function TemplateTab() {
           <h3 className="text-sm font-medium text-stone-700">무료 템플릿</h3>
           <span className="text-xs text-stone-500">{templates.length}개</span>
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {templates.map((template) => {
             const isSelected = invitation.templateId === template.id;
 

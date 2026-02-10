@@ -209,7 +209,7 @@ export function AccountTab() {
       </div>
 
       {/* 신랑측 */}
-      <div className="bg-white rounded-xl p-6 space-y-6 border border-stone-200">
+      <div className="bg-white rounded-xl p-4 md:p-6 space-y-4 md:space-y-6 border border-stone-200">
         <h3 className="text-sm font-medium text-stone-700">신랑측 계좌</h3>
 
         {/* 본인 계좌 */}
@@ -323,7 +323,7 @@ export function AccountTab() {
       </div>
 
       {/* 신부측 */}
-      <div className="bg-white rounded-xl p-6 space-y-6 border border-stone-200">
+      <div className="bg-white rounded-xl p-4 md:p-6 space-y-4 md:space-y-6 border border-stone-200">
         <h3 className="text-sm font-medium text-stone-700">신부측 계좌</h3>
 
         {/* 본인 계좌 */}

@@ -237,7 +237,7 @@ export function VenueTab() {
       <div className="bg-white rounded-xl p-6 space-y-4 border border-stone-200">
         <h3 className="text-sm font-medium text-stone-700 mb-3">예식 일시</h3>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-stone-600 mb-2">
               날짜 <span className="text-red-500">*</span>

@@ -294,7 +294,7 @@ export function SettingsTab() {
       {/* 통계 */}
       <div className="bg-white rounded-xl p-6 space-y-4 border border-stone-200">
         <h3 className="text-sm font-medium text-stone-700 mb-3">통계</h3>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="p-4 bg-white rounded-xl border border-stone-200">
             <p className="text-xs text-stone-500 mb-1">조회수</p>
             <p className="text-2xl font-bold text-stone-900">

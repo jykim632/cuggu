@@ -132,7 +132,7 @@ export function GalleryTab() {
         {/* 업로드 버튼 */}
         <div className="bg-white rounded-xl p-6 border border-stone-200">
           <label
-            className={`flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-xl transition-colors group ${
+            className={`flex flex-col items-center justify-center w-full h-24 md:h-36 border-2 border-dashed rounded-xl transition-colors group ${
               uploading
                 ? 'border-stone-300 bg-stone-50 cursor-wait'
                 : 'bg-white border-stone-300 cursor-pointer hover:border-pink-300 hover:bg-pink-50/30'
