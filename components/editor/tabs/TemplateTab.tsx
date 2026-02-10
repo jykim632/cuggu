@@ -4,13 +4,17 @@ import { useState, useEffect, useCallback } from 'react';
 import { useInvitationEditor } from '@/stores/invitation-editor';
 import { useCredits } from '@/hooks/useCredits';
 import { useToast } from '@/components/ui/Toast';
-import { Check, Lock, Sparkles, Loader2, RefreshCw, Wand2, Trash2, AlertTriangle, BookOpen } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { checkContextItems, type ContextCheckItem } from '@/lib/ai/theme-context';
+import { Check, Lock, Sparkles, Loader2, RefreshCw, Wand2, Trash2, AlertTriangle, BookOpen, Zap, CircleCheck, CircleX } from 'lucide-react';
+import { findThemeModelById } from '@/lib/ai/theme-models';
 
 // ── 타입 ──
 
 interface SavedTheme {
   id: string;
   prompt: string;
+  modelId: string | null;
   theme: Record<string, unknown>;
   status: 'completed' | 'safelist_failed';
   failReason: string | null;
@@ -178,12 +182,17 @@ export function TemplateTab() {
   const { showToast } = useToast();
 
   const [prompt, setPrompt] = useState('');
+  const [mode, setMode] = useState<'fast' | 'quality'>('fast');
   const [isGenerating, setIsGenerating] = useState(false);
 
   // 테마 라이브러리 상태
   const [savedThemes, setSavedThemes] = useState<SavedTheme[]>([]);
   const [isLoadingThemes, setIsLoadingThemes] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // 컨텍스트 확인 모달
+  const [contextModalOpen, setContextModalOpen] = useState(false);
+  const [contextItems, setContextItems] = useState<ContextCheckItem[]>([]);
 
   const isCustomActive = invitation.templateId === 'custom' && invitation.customTheme;
 
@@ -224,9 +233,7 @@ export function TemplateTab() {
     updateInvitation({ templateId, customTheme: undefined });
   };
 
-  const handleGenerate = async () => {
-    if (!prompt.trim() || isGenerating) return;
-
+  const doGenerate = async () => {
     setIsGenerating(true);
     try {
       const res = await fetch('/api/ai/theme', {
@@ -235,6 +242,7 @@ export function TemplateTab() {
         body: JSON.stringify({
           prompt: prompt.trim(),
           invitationId: invitation.id,
+          mode,
         }),
       });
 
@@ -264,6 +272,27 @@ export function TemplateTab() {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleGenerate = () => {
+    if (!prompt.trim() || isGenerating) return;
+
+    // 컨텍스트 체크: 빠진 항목이 있으면 모달 표시
+    const items = checkContextItems({
+      weddingDate: invitation.weddingDate,
+      venueName: invitation.venueName,
+      introMessage: invitation.introMessage,
+      galleryImages: invitation.galleryImages,
+    });
+
+    const hasMissing = items.some((item) => !item.filled);
+    if (hasMissing) {
+      setContextItems(items);
+      setContextModalOpen(true);
+      return;
+    }
+
+    doGenerate();
   };
 
   const handleApplyTheme = (theme: SavedTheme) => {
@@ -314,6 +343,38 @@ export function TemplateTab() {
           </div>
         </div>
 
+        {/* 모드 선택 세그먼트 컨트롤 */}
+        <div className="flex rounded-lg bg-white border border-violet-200 p-0.5">
+          <button
+            type="button"
+            onClick={() => setMode('fast')}
+            disabled={isGenerating}
+            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all ${
+              mode === 'fast'
+                ? 'bg-violet-100 text-violet-700 shadow-sm'
+                : 'text-stone-500 hover:text-stone-700'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5" />
+            빠른 생성
+            <span className="text-[10px] font-normal opacity-70">~2초</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('quality')}
+            disabled={isGenerating}
+            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all ${
+              mode === 'quality'
+                ? 'bg-violet-100 text-violet-700 shadow-sm'
+                : 'text-stone-500 hover:text-stone-700'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            정밀 생성
+            <span className="text-[10px] font-normal opacity-70">~5초</span>
+          </button>
+        </div>
+
         <textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
@@ -322,6 +383,10 @@ export function TemplateTab() {
           maxLength={200}
           disabled={isGenerating}
         />
+
+        <p className="text-xs text-stone-400 -mt-1">
+          입력된 예식 정보(계절, 장소 유형)를 참고하여 테마를 생성합니다. 개인정보는 전달되지 않습니다.
+        </p>
 
         <div className="flex items-center justify-between">
           <span className="text-xs text-stone-400">
@@ -422,6 +487,19 @@ export function TemplateTab() {
                       <p className="text-sm text-stone-800 truncate">&ldquo;{theme.prompt}&rdquo;</p>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-xs text-stone-400">{formatRelativeTime(theme.createdAt)}</span>
+                        {(() => {
+                          const model = theme.modelId ? findThemeModelById(theme.modelId) : null;
+                          if (!model) return null;
+                          const isFast = model.speed === 'fast';
+                          return (
+                            <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                              isFast ? 'bg-sky-50 text-sky-600' : 'bg-violet-50 text-violet-600'
+                            }`}>
+                              {isFast ? <Zap className="w-2.5 h-2.5" /> : <Sparkles className="w-2.5 h-2.5" />}
+                              {isFast ? '빠른' : '정밀'}
+                            </span>
+                          );
+                        })()}
                         {theme.status === 'safelist_failed' && (
                           <span className="inline-flex items-center gap-1 text-xs text-amber-600">
                             <AlertTriangle className="w-3 h-3" />
@@ -540,6 +618,41 @@ export function TemplateTab() {
             </div>
         </div>
       </div>
+
+      {/* 컨텍스트 확인 모달 */}
+      <ConfirmDialog
+        isOpen={contextModalOpen}
+        onClose={() => setContextModalOpen(false)}
+        onConfirm={() => {
+          setContextModalOpen(false);
+          doGenerate();
+        }}
+        title="예식 정보를 입력하면 더 맞춤형 테마를 생성할 수 있어요"
+        description={
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              {contextItems.map((item) => (
+                <div key={item.label} className="flex items-center gap-2 text-sm">
+                  {item.filled ? (
+                    <CircleCheck className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                  ) : (
+                    <CircleX className="w-4 h-4 text-stone-300 flex-shrink-0" />
+                  )}
+                  <span className={item.filled ? 'text-stone-700' : 'text-stone-400'}>
+                    {item.label}: {item.detail}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-stone-400 pt-1 border-t border-stone-100">
+              이름·연락처·계좌 등 개인정보는 AI에 전달되지 않습니다
+            </p>
+          </div>
+        }
+        confirmText="그래도 생성"
+        cancelText="정보 입력하기"
+        variant="info"
+      />
     </div>
   );
 }

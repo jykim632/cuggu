@@ -1,19 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/db';
-import { users, aiThemes, aiModelSettings } from '@/db/schema';
+import { users, aiThemes, invitations } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { checkCreditsFromUser, deductCredits, refundCredits } from '@/lib/ai/credits';
 import { generateTheme } from '@/lib/ai/theme-generation';
+import { DEFAULT_THEME_CONFIG, findThemeModelById } from '@/lib/ai/theme-models';
+import type { AIThemeModel, ThemeMode, ThemeGenerationConfig } from '@/lib/ai/theme-models';
+import { extractThemeContext, buildContextPrompt } from '@/lib/ai/theme-context';
 import { checkThemeClasses } from '@/lib/templates/safelist';
+import { getAppSetting } from '@/lib/settings';
 import { rateLimit } from '@/lib/rate-limit';
 import { z } from 'zod';
+
+// ── 모델 해석 ──
+
+async function resolveThemeModel(mode: ThemeMode = 'fast'): Promise<AIThemeModel> {
+  const config = await getAppSetting<ThemeGenerationConfig>(
+    'theme_generation_config',
+    DEFAULT_THEME_CONFIG,
+  );
+
+  const modelId = mode === 'quality' ? config.qualityModelId : config.fastModelId;
+  const model = findThemeModelById(modelId);
+
+  if (!model) {
+    // fallback: 설정이 잘못됐으면 기본값 사용
+    const fallbackId = mode === 'quality'
+      ? DEFAULT_THEME_CONFIG.qualityModelId
+      : DEFAULT_THEME_CONFIG.fastModelId;
+    const fallback = findThemeModelById(fallbackId);
+    if (!fallback) {
+      throw { status: 500, message: '테마 모델 설정 오류' };
+    }
+    return fallback;
+  }
+
+  return model;
+}
 
 // ── POST: 테마 생성 ──
 
 const CreateRequestSchema = z.object({
   prompt: z.string().min(2, '프롬프트는 2자 이상 입력해주세요').max(200, '프롬프트는 200자 이내로 입력해주세요'),
   invitationId: z.string().optional(),
+  mode: z.enum(['fast', 'quality']).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -35,33 +66,33 @@ export async function POST(request: NextRequest) {
     }
     userId = user.id;
 
-    // 3. 테마 기능 활성화 확인
-    const themeSetting = await db.query.aiModelSettings.findFirst({
-      where: eq(aiModelSettings.modelId, 'theme-claude-sonnet'),
-    });
-    if (themeSetting?.enabled === false) {
-      return NextResponse.json(
-        { error: '테마 생성 기능이 비활성화되어 있습니다' },
-        { status: 403 }
-      );
-    }
-
-    // 4. Rate limiting (10회/시간)
-    const rateLimitResult = await rateLimit(`ratelimit:ai-theme:${user.id}`, 10, 3600);
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { error: '테마 생성 횟수를 초과했습니다. 잠시 후 다시 시도해주세요.' },
-        { status: 429 }
-      );
-    }
-
-    // 5. 요청 파싱
+    // 3. 요청 파싱
     const body = await request.json();
     const parsed = CreateRequestSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
         { error: parsed.error.issues[0]?.message || '잘못된 요청입니다' },
         { status: 400 }
+      );
+    }
+
+    // 4. 모델 해석 (mode 기반)
+    let themeModel: AIThemeModel;
+    try {
+      themeModel = await resolveThemeModel(parsed.data.mode);
+    } catch (err: any) {
+      if (err.status && err.message) {
+        return NextResponse.json({ error: err.message }, { status: err.status });
+      }
+      throw err;
+    }
+
+    // 5. Rate limiting (10회/시간)
+    const rateLimitResult = await rateLimit(`ratelimit:ai-theme:${user.id}`, 10, 3600);
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        { error: '테마 생성 횟수를 초과했습니다. 잠시 후 다시 시도해주세요.' },
+        { status: 429 }
       );
     }
 
@@ -80,19 +111,51 @@ export async function POST(request: NextRequest) {
     // 7. 크레딧 차감
     await deductCredits(user.id, 1);
 
+    // 7.5. 청첩장 컨텍스트 추출 (invitationId가 있을 때만)
+    let enhancedPrompt = parsed.data.prompt;
+    if (parsed.data.invitationId) {
+      try {
+        const inv = await db.query.invitations.findFirst({
+          where: and(
+            eq(invitations.id, parsed.data.invitationId),
+            eq(invitations.userId, user.id),
+          ),
+          columns: {
+            weddingDate: true,
+            venueName: true,
+            introMessage: true,
+            galleryImages: true,
+          },
+        });
+
+        if (inv) {
+          const ctx = extractThemeContext({
+            weddingDate: inv.weddingDate,
+            venueName: inv.venueName,
+            introMessage: inv.introMessage,
+            galleryImages: inv.galleryImages,
+          });
+          const contextSuffix = buildContextPrompt(ctx);
+          if (contextSuffix) {
+            enhancedPrompt = parsed.data.prompt + contextSuffix;
+          }
+        }
+      } catch {
+        // 컨텍스트 추출 실패 시 원본 프롬프트로 폴백
+      }
+    }
+
     // 8. AI 테마 생성
     let result;
     try {
-      result = await generateTheme(parsed.data.prompt);
+      result = await generateTheme(enhancedPrompt, themeModel);
     } catch (error) {
       // Zod 파싱 실패(구조적 결함) — 크레딧 환불, 저장 안 함
       await refundCredits(user.id, 1);
       throw error;
     }
 
-    // 9. DB 저장 (safelist 검증 전)
-    const cost = (result.usage.inputTokens * 3 + result.usage.outputTokens * 15) / 1_000_000;
-
+    // 9. DB 저장
     const safelistResult = checkThemeClasses(result.theme as unknown as Record<string, unknown>);
     const themeStatus = safelistResult.valid ? 'completed' as const : 'safelist_failed' as const;
 
@@ -100,13 +163,14 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       invitationId: parsed.data.invitationId || null,
       prompt: parsed.data.prompt,
+      modelId: result.modelId,
       theme: result.theme,
       status: themeStatus,
       failReason: safelistResult.valid ? null : safelistResult.violations.slice(0, 20).join('\n'),
       creditsUsed: 1,
       inputTokens: result.usage.inputTokens,
       outputTokens: result.usage.outputTokens,
-      cost,
+      cost: result.cost,
     }).returning({ id: aiThemes.id });
 
     // 10. 잔여 크레딧
@@ -123,6 +187,8 @@ export async function POST(request: NextRequest) {
       success: true,
       themeId: inserted.id,
       theme: result.theme,
+      modelId: result.modelId,
+      mode: parsed.data.mode || 'fast',
       status: themeStatus,
       failReason: safelistResult.valid ? undefined : '일부 스타일이 safelist에 포함되지 않아 적용 시 누락될 수 있습니다',
       remainingCredits,
@@ -163,6 +229,7 @@ export async function GET(request: NextRequest) {
     .select({
       id: aiThemes.id,
       prompt: aiThemes.prompt,
+      modelId: aiThemes.modelId,
       theme: aiThemes.theme,
       status: aiThemes.status,
       failReason: aiThemes.failReason,

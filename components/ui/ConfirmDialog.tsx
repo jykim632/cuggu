@@ -2,14 +2,14 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, X } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 
 interface ConfirmDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
   title: string;
-  description?: string;
+  description?: ReactNode;
   confirmText?: string;
   cancelText?: string;
   variant?: "danger" | "warning" | "info";
@@ -132,9 +132,9 @@ export function ConfirmDialog({
                       {title}
                     </h3>
                     {description && (
-                      <p className="text-sm text-stone-500 leading-relaxed">
+                      <div className="text-sm text-stone-500 leading-relaxed">
                         {description}
-                      </p>
+                      </div>
                     )}
                   </div>
                 </div>
