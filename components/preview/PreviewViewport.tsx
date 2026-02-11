@@ -32,11 +32,11 @@ export function PreviewViewport({
 
       {/* 콘텐츠 영역 */}
       <div
-        className={`relative bg-white overflow-hidden ${borderRadius} ${
+        className={`bg-white overflow-hidden ${borderRadius} ${
           mode === 'phone'
-            ? 'w-[375px] h-[812px]'
+            ? 'relative z-10 w-[375px] h-[812px]'
             : mode === 'mobile'
-              ? 'w-[375px] shadow-xl'
+              ? 'relative w-[375px] shadow-xl'
               : 'w-full'
         }`}
       >

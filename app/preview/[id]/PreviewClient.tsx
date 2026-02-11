@@ -6,6 +6,9 @@ import type { Invitation } from '@/schemas/invitation';
 import { getTemplateComponent } from '@/lib/templates/get-template';
 import { BaseTemplate } from '@/components/templates/BaseTemplate';
 import { PreviewViewport } from '@/components/preview/PreviewViewport';
+import { FloatingBadge } from '@/components/invitation/FloatingBadge';
+import { useInvitationView } from '@/stores/invitation-view';
+import { PremiumToggle } from '@/components/dev/PremiumToggle';
 import {
   ArrowLeft,
   Monitor,
@@ -19,6 +22,7 @@ type ViewMode = 'desktop' | 'mobile' | 'phone';
 
 interface PreviewClientProps {
   data: Invitation;
+  isPremium?: boolean;
 }
 
 function useLocalStorage<T>(key: string, defaultValue: T): [T, (v: T) => void] {
@@ -43,10 +47,17 @@ function useLocalStorage<T>(key: string, defaultValue: T): [T, (v: T) => void] {
   return [value, setAndPersist];
 }
 
-export function PreviewClient({ data }: PreviewClientProps) {
+export function PreviewClient({ data, isPremium: isPremiumProp = false }: PreviewClientProps) {
+  const { isPremium, setIsPremium } = useInvitationView();
+
+  useEffect(() => {
+    setIsPremium(isPremiumProp);
+  }, [isPremiumProp, setIsPremium]);
+
   const [mode, setMode] = useLocalStorage<ViewMode>('cuggu-preview-mode', 'mobile');
   const [phoneModel, setPhoneModel] = useLocalStorage<'iphone' | 'galaxy'>('cuggu-preview-phone', 'iphone');
-  const [zoom, setZoom] = useLocalStorage<number>('cuggu-preview-zoom', 100);
+  const [zoom, setZoom] = useLocalStorage<number>('cuggu-preview-phone-zoom', 92);
+
 
   const isCustom = data.templateId === 'custom' && (data as any).customTheme;
   const TemplateComponent = getTemplateComponent(data.templateId);
@@ -59,6 +70,7 @@ export function PreviewClient({ data }: PreviewClientProps) {
 
   return (
     <div className="min-h-screen bg-stone-100">
+      <PremiumToggle />
       {/* 고정 상단 툴바 */}
       <header className="h-14 fixed top-0 inset-x-0 z-50 bg-white border-b border-stone-200 grid grid-cols-[1fr_auto_1fr] items-center px-4">
         {/* 좌측: 편집기로 돌아가기 */}
@@ -127,9 +139,19 @@ export function PreviewClient({ data }: PreviewClientProps) {
                 >
                   <ZoomOut className="w-4 h-4 text-stone-600" />
                 </button>
-                <span className="text-xs text-stone-500 font-mono w-8 text-center">
-                  {zoom}%
-                </span>
+                <div className="flex items-center">
+                  <input
+                    type="number"
+                    min={50}
+                    max={150}
+                    value={zoom}
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value, 10);
+                      if (!isNaN(v)) setZoom(Math.max(50, Math.min(v, 150)));
+                    }}
+                    className="w-8 text-xs text-stone-500 font-mono text-right bg-transparent outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none focus:text-stone-900"
+                  /><span className="text-xs text-stone-400 font-mono">%</span>
+                </div>
                 <button
                   onClick={() => setZoom(Math.min(150, zoom + 10))}
                   className="p-1 hover:bg-stone-100 rounded transition-colors disabled:opacity-30"
@@ -144,21 +166,23 @@ export function PreviewClient({ data }: PreviewClientProps) {
       </header>
 
       {/* 뷰포트 */}
-      <div className="pt-14 min-h-screen flex justify-center">
-        <div className={`${mode === 'phone' ? 'py-8' : mode === 'mobile' ? 'py-8' : 'w-full'}`}>
+      <div className={`flex justify-center ${mode === 'phone' ? 'h-screen pt-14 items-start overflow-hidden' : 'pt-14 min-h-screen'}`}>
+        <div className={`${mode === 'phone' ? 'pt-4' : mode === 'mobile' ? 'py-8' : 'w-full'}`}>
           <PreviewViewport
             mode={mode}
             phoneModel={phoneModel}
             zoom={mode === 'phone' ? zoom : 100}
           >
             {isCustom ? (
-              <BaseTemplate data={data} theme={(data as any).customTheme} isPreview={mode === 'phone'} />
+              <BaseTemplate data={data} theme={(data as any).customTheme} isPreview />
             ) : (
-              <TemplateComponent data={data} isPreview={mode === 'phone'} />
+              <TemplateComponent data={data} isPreview />
             )}
+            {!isPremium && mode === 'phone' && <FloatingBadge />}
           </PreviewViewport>
         </div>
       </div>
+      {!isPremium && mode !== 'phone' && <FloatingBadge />}
     </div>
   );
 }

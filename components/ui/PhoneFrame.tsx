@@ -11,7 +11,7 @@ export function PhoneFrame({ model }: PhoneFrameProps) {
           <div className="absolute inset-[3px] bg-black rounded-[2.8rem]" />
 
           {/* Dynamic Island */}
-          <div className="absolute top-[25px] left-1/2 -translate-x-1/2 w-[100px] h-[30px] bg-black rounded-full z-10" />
+          <div className="absolute top-[25px] left-1/2 -translate-x-1/2 w-[100px] h-[30px] bg-black rounded-full z-20" />
 
           {/* 측면 버튼들 */}
           <div className="absolute left-[-3px] top-[100px] w-[3px] h-[28px] bg-slate-700 rounded-l-sm" />
@@ -45,7 +45,7 @@ export function PhoneFrame({ model }: PhoneFrameProps) {
         <div className="absolute inset-[3px] bg-black rounded-[2.3rem]" />
 
         {/* 펀치홀 카메라 */}
-        <div className="absolute top-[18px] left-1/2 -translate-x-1/2 w-[12px] h-[12px] bg-black rounded-full z-10 ring-[1px] ring-slate-700" />
+        <div className="absolute top-[18px] left-1/2 -translate-x-1/2 w-[12px] h-[12px] bg-black rounded-full z-20 ring-[1px] ring-slate-700" />
 
         {/* 측면 버튼들 */}
         <div className="absolute left-[-3px] top-[120px] w-[3px] h-[50px] bg-slate-600 rounded-l-sm" />

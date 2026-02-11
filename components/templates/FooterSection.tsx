@@ -1,5 +1,7 @@
+import { useRef, useEffect } from 'react';
 import type { Invitation } from '@/schemas/invitation';
 import type { FooterConfig } from '@/lib/templates/types';
+import { useInvitationView } from '@/stores/invitation-view';
 import { DecorationRenderer } from './renderers/DecorationRenderer';
 import { DividerRenderer } from './renderers/DividerRenderer';
 
@@ -14,8 +16,22 @@ function getCtaUrl(invitationId: string) {
 }
 
 function ViralCTA({ invitationId }: { invitationId: string }) {
+  const setCtaVisible = useInvitationView((s) => s.setCtaVisible);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setCtaVisible(entry.isIntersecting),
+      { threshold: 0.1 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [setCtaVisible]);
+
   return (
-    <div className="mt-6 pt-5 border-t border-stone-100">
+    <div ref={ref} className="mt-6 pt-5 border-t border-stone-100">
       <a
         href={getCtaUrl(invitationId)}
         data-event="viral_cta_click"
@@ -32,6 +48,8 @@ function ViralCTA({ invitationId }: { invitationId: string }) {
 }
 
 function FooterCentered({ data, config, isPreview }: FooterSectionProps) {
+  const isPremium = useInvitationView((s) => s.isPremium);
+
   return (
     <footer className={config.containerClass ?? 'py-8 md:py-12 px-6 text-center text-xs md:text-sm text-gray-500 border-t border-amber-100'}>
       {config.topDivider && <DividerRenderer config={config.topDivider} />}
@@ -39,18 +57,20 @@ function FooterCentered({ data, config, isPreview }: FooterSectionProps) {
       <p className={config.nameClass ?? ''}>
         {data.groom.name} & {data.bride.name}
       </p>
-      {!isPreview && <ViralCTA invitationId={data.id} />}
+      {!isPremium && <ViralCTA invitationId={data.id} />}
     </footer>
   );
 }
 
 function FooterFlexBetween({ data, config, isPreview }: FooterSectionProps) {
+  const isPremium = useInvitationView((s) => s.isPremium);
+
   return (
     <footer className={config.containerClass ?? 'py-10 md:py-14 px-8 md:px-12 border-t border-zinc-200'}>
       <div className="flex items-center justify-between text-xs text-zinc-400">
         <p className={config.nameClass ?? ''}>{data.groom.name} & {data.bride.name}</p>
       </div>
-      {!isPreview && (
+      {!isPreview && !isPremium && (
         <div className="text-center mt-6">
           <ViralCTA invitationId={data.id} />
         </div>

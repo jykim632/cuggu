@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { getTemplateComponent } from '@/lib/templates/get-template';
 import { BaseTemplate } from '@/components/templates/BaseTemplate';
 import { PreviewViewport } from '@/components/preview/PreviewViewport';
-import { ZoomIn, ZoomOut, Smartphone, Monitor } from 'lucide-react';
+import { Smartphone, Monitor } from 'lucide-react';
 
 interface PreviewPanelProps {
   invitation: any; // TODO: Invitation 타입
@@ -18,9 +18,13 @@ interface PreviewPanelProps {
  * - 실시간 템플릿 렌더링
  */
 export function PreviewPanel({ invitation }: PreviewPanelProps) {
-  const [zoom, setZoom] = useState(90);
   const [device, setDevice] = useState<'mobile' | 'desktop'>('mobile');
   const [phoneModel, setPhoneModel] = useState<'iphone' | 'galaxy'>('iphone');
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo(0, 0);
+  }, [device]);
 
   // 미리보기용 데이터 변환 (기본값 채우기)
   // useMemo 의존성을 더 세부적으로 지정하여 실시간 반영 보장
@@ -179,46 +183,14 @@ export function PreviewPanel({ invitation }: PreviewPanelProps) {
           )}
         </div>
 
-        {/* 줌 조절 */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setZoom(Math.max(50, zoom - 5))}
-            className="p-1 hover:bg-stone-100 rounded transition-colors disabled:opacity-30"
-            disabled={zoom <= 50}
-          >
-            <ZoomOut className="w-3.5 h-3.5 text-stone-600" />
-          </button>
-
-          <input
-            type="range"
-            min="50"
-            max="150"
-            step="5"
-            value={zoom}
-            onChange={(e) => setZoom(Number(e.target.value))}
-            className="flex-1 h-1.5 bg-stone-200 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-stone-900 [&::-webkit-slider-thumb]:cursor-pointer"
-          />
-
-          <button
-            onClick={() => setZoom(Math.min(150, zoom + 5))}
-            className="p-1 hover:bg-stone-100 rounded transition-colors disabled:opacity-30"
-            disabled={zoom >= 150}
-          >
-            <ZoomIn className="w-3.5 h-3.5 text-stone-600" />
-          </button>
-
-          <span className="text-xs text-stone-500 font-mono w-10 text-right">
-            {zoom}%
-          </span>
-        </div>
       </div>
 
       {/* 미리보기 영역 */}
-      <div className="flex-1 overflow-auto p-8 flex items-start justify-center">
+      <div ref={scrollRef} className={`flex-1 p-8 flex items-start justify-center ${device === 'mobile' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
         <PreviewViewport
           mode={device === 'mobile' ? 'phone' : 'desktop'}
           phoneModel={phoneModel}
-          zoom={zoom}
+          zoom={device === 'mobile' ? 85 : 100}
         >
           {isCustom ? (
             <BaseTemplate data={previewData} theme={invitation.customTheme} isPreview />
