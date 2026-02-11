@@ -26,6 +26,7 @@ export interface AIStyleInfo {
   value: AIStyle;
   label: string;
   description: string;
+  thumbnail?: string;
 }
 
 export const AI_STYLES: AIStyleInfo[] = [

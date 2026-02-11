@@ -236,8 +236,11 @@ export const aiGenerations = pgTable(
 
     originalUrl: varchar('original_url', { length: 500 }).notNull(),
     style: aiStyleEnum('style').notNull(),
+    role: varchar('role', { length: 8 }), // 'GROOM' | 'BRIDE'
     generatedUrls: text('generated_urls').array(), // 4 URLs
     selectedUrl: varchar('selected_url', { length: 500 }),
+    isFavorited: boolean('is_favorited').default(false).notNull(),
+    modelId: varchar('model_id', { length: 64 }),
     status: aiGenerationStatusEnum('status').default('PENDING').notNull(),
     creditsUsed: integer('credits_used').default(1).notNull(),
     cost: real('cost').notNull(), // USD

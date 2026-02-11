@@ -1,15 +1,21 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Sparkles, Settings2, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Sparkles, Gem, Check, ExternalLink } from 'lucide-react';
 import { AIStyle, PersonRole } from '@/types/ai';
 import { AIPhotoUploader } from './components/AIPhotoUploader';
 import { StyleSelector } from './components/StyleSelector';
 import { AIStreamingGallery } from '@/components/ai/AIStreamingGallery';
 import { AIResultGallery } from '@/components/ai/AIResultGallery';
+import { AIStudioTabs, type StudioTab } from './components/AIStudioTabs';
+import { HistoryTab } from './components/HistoryTab';
+import { FavoritesTab } from './components/FavoritesTab';
+import { ApplyToInvitationModal } from './components/ApplyToInvitationModal';
 import { DEFAULT_MODEL } from '@/lib/ai/models';
 
 const IS_DEV = process.env.NODE_ENV === 'development';
+
+// ── State Types ──
 
 interface RoleState {
   image: File | null;
@@ -27,7 +33,7 @@ const initialRoleState: RoleState = {
   image: null,
   style: null,
   generating: false,
-  streamingUrls: [null, null, null, null],
+  streamingUrls: [null, null],
   statusMessage: '',
   resultId: null,
   resultUrls: [],
@@ -43,7 +49,10 @@ interface AvailableModel {
   isRecommended: boolean;
 }
 
+// ── Main Page ──
+
 export default function AIPhotosPage() {
+  const [activeTab, setActiveTab] = useState<StudioTab>('generate');
   const [credits, setCredits] = useState<number>(0);
   const [isLoadingCredits, setIsLoadingCredits] = useState(true);
 
@@ -53,12 +62,30 @@ export default function AIPhotosPage() {
   // 모델 선택
   const [availableModels, setAvailableModels] = useState<AvailableModel[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // 적용 모달
+  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [applyToast, setApplyToast] = useState<string | null>(null);
+
+  // 히스토리/즐겨찾기 선택 (카드 멀티셀렉트)
+  const [historySelectedIds, setHistorySelectedIds] = useState<Set<string>>(new Set());
+  const [favoritesSelectedIds, setFavoritesSelectedIds] = useState<Set<string>>(new Set());
+
+  // generations 참조 (선택된 ID → URL 매핑용)
+  const historyGenerationsRef = useRef<any[]>([]);
+  const favoritesGenerationsRef = useRef<any[]>([]);
 
   useEffect(() => {
     fetchCredits();
     fetchModels();
   }, []);
+
+  // Toast 자동 닫기
+  useEffect(() => {
+    if (!applyToast) return;
+    const timer = setTimeout(() => setApplyToast(null), 5000);
+    return () => clearTimeout(timer);
+  }, [applyToast]);
 
   const fetchCredits = async () => {
     try {
@@ -90,7 +117,6 @@ export default function AIPhotosPage() {
     }
   };
 
-  const getState = (role: PersonRole) => (role === 'GROOM' ? groom : bride);
   const setState = (role: PersonRole) => (role === 'GROOM' ? setGroom : setBride);
 
   const handleGenerate = useCallback(async (role: PersonRole) => {
@@ -107,7 +133,7 @@ export default function AIPhotosPage() {
       ...prev,
       generating: true,
       error: null,
-      streamingUrls: [null, null, null, null],
+      streamingUrls: [null, null],
       statusMessage: '준비 중...',
       resultId: null,
       resultUrls: [],
@@ -204,135 +230,148 @@ export default function AIPhotosPage() {
     });
   };
 
-  const allSelected = [...groom.selectedUrls, ...bride.selectedUrls];
-  const canApply = allSelected.length > 0;
+  const handleHistoryToggleSelect = (id: string) => {
+    setHistorySelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleFavoritesToggleSelect = (id: string) => {
+    setFavoritesSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // 적용할 이미지 URL 수집
+  const getApplyImageUrls = (): string[] => {
+    if (activeTab === 'generate') {
+      return [...groom.selectedUrls, ...bride.selectedUrls];
+    }
+    if (activeTab === 'history') {
+      return getUrlsFromIds(historySelectedIds, historyGenerationsRef.current);
+    }
+    if (activeTab === 'favorites') {
+      return getUrlsFromIds(favoritesSelectedIds, favoritesGenerationsRef.current);
+    }
+    return [];
+  };
+
+  const applyImageUrls = getApplyImageUrls();
+  const canApply = applyImageUrls.length > 0;
   const anyGenerating = groom.generating || bride.generating;
 
+  const selectedCount =
+    activeTab === 'generate'
+      ? groom.selectedUrls.length + bride.selectedUrls.length
+      : activeTab === 'history'
+        ? historySelectedIds.size
+        : favoritesSelectedIds.size;
+
   return (
-    <div className="container mx-auto max-w-6xl space-y-8 p-6">
+    <div className="container mx-auto max-w-7xl space-y-6 p-6">
       {/* Header */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-rose-500" />
-          <h1 className="text-lg font-semibold text-stone-900">AI 포토 스튜디오</h1>
+      <div className="flex items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-rose-500" />
+            <h1 className="text-lg font-semibold text-stone-900">AI 포토 스튜디오</h1>
+          </div>
+          <p className="text-sm text-stone-500">
+            증명 사진으로 웨딩 화보를 만들어보세요
+          </p>
         </div>
-        <p className="text-sm text-stone-500">
-          증명 사진으로 웨딩 화보를 만들어보세요. 스타일을 선택하고 4장의 AI 사진을 생성합니다.
-        </p>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-stone-500">잔여 크레딧:</span>
-          {isLoadingCredits ? (
-            <span className="text-sm text-stone-400">로딩 중...</span>
-          ) : IS_DEV ? (
-            <span className="text-sm font-semibold text-green-600">무제한 (DEV)</span>
-          ) : (
-            <span className="text-sm font-semibold text-stone-900">{credits}회</span>
+
+        <div className="flex items-center gap-3">
+          {availableModels.length > 1 && activeTab === 'generate' && (
+            <select
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+              disabled={anyGenerating}
+              className="rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs text-stone-700 transition-colors hover:border-stone-300 focus:border-rose-400 focus:outline-none focus:ring-1 focus:ring-rose-400 disabled:opacity-50"
+            >
+              {availableModels.map((model) => (
+                <option key={model.id} value={model.id}>
+                  {model.name}{model.isRecommended ? ' ✦' : ''}
+                </option>
+              ))}
+            </select>
           )}
+          <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1 text-xs font-medium text-rose-700">
+            <Gem className="w-3 h-3" />
+            {isLoadingCredits ? (
+              '...'
+            ) : IS_DEV ? (
+              '∞ DEV'
+            ) : (
+              `${credits} 크레딧`
+            )}
+          </span>
         </div>
       </div>
 
-      {/* 고급 설정 (모델 선택) */}
-      {availableModels.length > 1 && (
-        <div className="rounded-lg border border-stone-200 bg-white">
-          <button
-            type="button"
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="flex w-full items-center justify-between px-5 py-3 text-sm text-stone-600 hover:text-stone-800 transition-colors"
-          >
-            <div className="flex items-center gap-2">
-              <Settings2 className="w-4 h-4" />
-              <span>고급 설정</span>
-              <span className="text-xs text-stone-400">
-                ({availableModels.find((m) => m.id === selectedModel)?.name})
-              </span>
-            </div>
-            {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </button>
+      {/* Tabs */}
+      <AIStudioTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-          {showAdvanced && (
-            <div className="border-t border-stone-100 px-5 py-4 space-y-2">
-              <p className="text-xs text-stone-500">AI 모델 선택</p>
-              <div className="space-y-1.5">
-                {availableModels.map((model) => (
-                  <label
-                    key={model.id}
-                    className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-colors ${
-                      selectedModel === model.id
-                        ? 'border-rose-500 bg-rose-50'
-                        : 'border-stone-200 hover:border-stone-300'
-                    } ${anyGenerating ? 'opacity-50 pointer-events-none' : ''}`}
-                  >
-                    <input
-                      type="radio"
-                      name="model"
-                      value={model.id}
-                      checked={selectedModel === model.id}
-                      onChange={(e) => setSelectedModel(e.target.value)}
-                      className="sr-only"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-stone-700">{model.name}</span>
-                        {model.isRecommended && (
-                          <span className="text-[10px] bg-rose-500 text-white px-1.5 py-0.5 rounded">추천</span>
-                        )}
-                      </div>
-                      <p className="text-[10px] text-stone-500 mt-0.5">{model.description}</p>
-                    </div>
-                    <div
-                      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                        selectedModel === model.id ? 'border-rose-500' : 'border-stone-300'
-                      }`}
-                    >
-                      {selectedModel === model.id && <div className="w-2 h-2 rounded-full bg-rose-500" />}
-                    </div>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
+      {/* Tab Content */}
+      {activeTab === 'generate' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <PersonSection
+            role="GROOM"
+            state={groom}
+            onImageChange={(file) => setGroom((prev) => ({ ...prev, image: file }))}
+            onStyleSelect={(style) => setGroom((prev) => ({ ...prev, style }))}
+            onGenerate={() => handleGenerate('GROOM')}
+            onRegenerate={() => handleRegenerate('GROOM')}
+            onToggleImage={(url) => handleToggleImage('GROOM', url)}
+            credits={credits}
+            anyGenerating={anyGenerating}
+          />
+          <PersonSection
+            role="BRIDE"
+            state={bride}
+            onImageChange={(file) => setBride((prev) => ({ ...prev, image: file }))}
+            onStyleSelect={(style) => setBride((prev) => ({ ...prev, style }))}
+            onGenerate={() => handleGenerate('BRIDE')}
+            onRegenerate={() => handleRegenerate('BRIDE')}
+            onToggleImage={(url) => handleToggleImage('BRIDE', url)}
+            credits={credits}
+            anyGenerating={anyGenerating}
+          />
         </div>
       )}
 
-      {/* Groom Section */}
-      <PersonSection
-        role="GROOM"
-        state={groom}
-        onImageChange={(file) => setGroom((prev) => ({ ...prev, image: file }))}
-        onStyleSelect={(style) => setGroom((prev) => ({ ...prev, style }))}
-        onGenerate={() => handleGenerate('GROOM')}
-        onRegenerate={() => handleRegenerate('GROOM')}
-        onToggleImage={(url) => handleToggleImage('GROOM', url)}
-        credits={credits}
-        anyGenerating={anyGenerating}
-      />
+      {activeTab === 'history' && (
+        <HistoryTab
+          selectedIds={historySelectedIds}
+          onToggleSelect={handleHistoryToggleSelect}
+          onGenerationsLoaded={(gens) => { historyGenerationsRef.current = gens; }}
+        />
+      )}
 
-      {/* Bride Section */}
-      <PersonSection
-        role="BRIDE"
-        state={bride}
-        onImageChange={(file) => setBride((prev) => ({ ...prev, image: file }))}
-        onStyleSelect={(style) => setBride((prev) => ({ ...prev, style }))}
-        onGenerate={() => handleGenerate('BRIDE')}
-        onRegenerate={() => handleRegenerate('BRIDE')}
-        onToggleImage={(url) => handleToggleImage('BRIDE', url)}
-        credits={credits}
-        anyGenerating={anyGenerating}
-      />
+      {activeTab === 'favorites' && (
+        <FavoritesTab
+          selectedIds={favoritesSelectedIds}
+          onToggleSelect={handleFavoritesToggleSelect}
+          onGenerationsLoaded={(gens) => { favoritesGenerationsRef.current = gens; }}
+        />
+      )}
 
-      {/* 선택된 사진 요약 + 적용 버튼 */}
+      {/* 적용 바 (sticky bottom) */}
       {canApply && (
         <div className="sticky bottom-6 z-10">
           <div className="mx-auto max-w-md rounded-xl border border-rose-200 bg-white px-6 py-4 shadow-lg">
             <div className="flex items-center justify-between">
               <span className="text-sm text-stone-600">
-                {allSelected.length}장 선택됨
+                {selectedCount}장 선택됨
               </span>
               <button
-                onClick={() => {
-                  // TODO: cuggu-abb에서 구현
-                  alert(`선택된 사진 ${allSelected.length}장\n\n청첩장 적용 기능은 다음 단계에서 구현됩니다.`);
-                }}
+                onClick={() => setShowApplyModal(true)}
                 className="flex items-center gap-2 rounded-lg bg-rose-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-rose-700"
               >
                 <Sparkles className="w-4 h-4" />
@@ -342,11 +381,58 @@ export default function AIPhotosPage() {
           </div>
         </div>
       )}
+
+      {/* 적용 모달 */}
+      <ApplyToInvitationModal
+        isOpen={showApplyModal}
+        imageUrls={applyImageUrls}
+        onClose={() => setShowApplyModal(false)}
+        onApplied={(name) => {
+          setApplyToast(`${selectedCount}장이 ${name}에 추가됨`);
+          // 선택 초기화
+          if (activeTab === 'generate') {
+            setGroom((prev) => ({ ...prev, selectedUrls: [] }));
+            setBride((prev) => ({ ...prev, selectedUrls: [] }));
+          } else if (activeTab === 'history') {
+            setHistorySelectedIds(new Set());
+          } else {
+            setFavoritesSelectedIds(new Set());
+          }
+        }}
+      />
+
+      {/* 적용 완료 토스트 */}
+      {applyToast && (
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2">
+          <div className="flex items-center gap-3 rounded-xl bg-stone-900 px-5 py-3 text-sm text-white shadow-lg">
+            <Check className="w-4 h-4 text-green-400" />
+            <span>{applyToast}</span>
+            <a
+              href="/dashboard/invitations"
+              className="flex items-center gap-1 text-rose-300 hover:text-rose-200"
+            >
+              에디터 열기 <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-// --- PersonSection ---
+// ── Helper ──
+
+function getUrlsFromIds(ids: Set<string>, generations: any[]): string[] {
+  const urls: string[] = [];
+  for (const gen of generations) {
+    if (ids.has(gen.id) && gen.generatedUrls) {
+      urls.push(...gen.generatedUrls);
+    }
+  }
+  return urls;
+}
+
+// ── PersonSection ──
 
 interface PersonSectionProps {
   role: PersonRole;

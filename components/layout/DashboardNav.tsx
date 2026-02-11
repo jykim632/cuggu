@@ -19,7 +19,7 @@ const navItems = [
     icon: FileHeart,
   },
   {
-    title: "AI 사진 생성",
+    title: "AI 포토 스튜디오",
     href: "/dashboard/ai-photos",
     icon: Sparkles,
   },
