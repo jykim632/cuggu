@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Check, RefreshCw, ZoomIn } from 'lucide-react';
 import { PersonRole } from '@/types/ai';
-import { ImageModal } from './ImageModal';
+import { ImageModal } from '@/components/ai/ImageModal';
 
 interface AIResultGalleryProps {
   role: PersonRole;

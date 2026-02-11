@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { Sparkles, Loader2, ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
 import { AIPhotoUploader } from '@/app/dashboard/ai-photos/components/AIPhotoUploader';
 import { StyleSelector } from '@/app/dashboard/ai-photos/components/StyleSelector';
-import { AIStreamingGallery } from './AIStreamingGallery';
-import { AIResultGallery } from './AIResultGallery';
+import { AIStreamingGallery } from '@/components/ai/AIStreamingGallery';
+import { AIResultGallery } from '@/components/ai/AIResultGallery';
 import { PersonRole, AIStyle, AIGenerationResult } from '@/types/ai';
 import { DEFAULT_MODEL } from '@/lib/ai/models';
 

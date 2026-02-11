@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { X, ZoomIn } from 'lucide-react';
-import { ImageModal } from './ImageModal';
+import { ImageModal } from '@/components/ai/ImageModal';
 
 interface GalleryImageGridProps {
   images: string[];
