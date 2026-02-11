@@ -12,7 +12,7 @@ export const AI_CONFIG = {
   RATE_LIMIT_WINDOW: 600, // 10분
 
   /** 생성할 이미지 수 */
-  BATCH_SIZE: 4,
+  BATCH_SIZE: 2,
 
   /** 허용 파일 타입 */
   ALLOWED_MIME_TYPES: ['image/jpeg', 'image/png', 'image/jpg'] as const,

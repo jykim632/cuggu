@@ -7,7 +7,8 @@ import { checkCreditsFromUser, deductCredits, refundCredits } from '@/lib/ai/cre
 import { generateTheme } from '@/lib/ai/theme-generation';
 import { DEFAULT_THEME_CONFIG, findThemeModelById } from '@/lib/ai/theme-models';
 import type { AIThemeModel, ThemeMode, ThemeGenerationConfig } from '@/lib/ai/theme-models';
-import { extractThemeContext, buildContextPrompt } from '@/lib/ai/theme-context';
+import { extractThemeContext } from '@/lib/ai/theme-context';
+import type { ThemeContextResult } from '@/lib/ai/theme-context';
 import { checkThemeClasses } from '@/lib/templates/safelist';
 import { getAppSetting } from '@/lib/settings';
 import { rateLimit } from '@/lib/rate-limit';
@@ -112,7 +113,7 @@ export async function POST(request: NextRequest) {
     await deductCredits(user.id, 1);
 
     // 7.5. 청첩장 컨텍스트 추출 (invitationId가 있을 때만)
-    let enhancedPrompt = parsed.data.prompt;
+    let themeContext: ThemeContextResult | null = null;
     if (parsed.data.invitationId) {
       try {
         const inv = await db.query.invitations.findFirst({
@@ -129,26 +130,24 @@ export async function POST(request: NextRequest) {
         });
 
         if (inv) {
-          const ctx = extractThemeContext({
+          themeContext = extractThemeContext({
             weddingDate: inv.weddingDate,
             venueName: inv.venueName,
             introMessage: inv.introMessage,
             galleryImages: inv.galleryImages,
           });
-          const contextSuffix = buildContextPrompt(ctx);
-          if (contextSuffix) {
-            enhancedPrompt = parsed.data.prompt + contextSuffix;
-          }
         }
       } catch {
-        // 컨텍스트 추출 실패 시 원본 프롬프트로 폴백
+        // 컨텍스트 추출 실패 시 null 폴백
       }
     }
 
-    // 8. AI 테마 생성
+    // 8. AI 테마 생성 (컨텍스트 + 랜덤 페르소나/레이아웃 시드 자동 주입)
     let result;
     try {
-      result = await generateTheme(enhancedPrompt, themeModel);
+      result = await generateTheme(parsed.data.prompt, themeModel, {
+        context: themeContext,
+      });
     } catch (error) {
       // 생성 실패 — 크레딧 환불 + DB에 실패 기록 (API 비용은 이미 발생)
       await refundCredits(user.id, 1);
