@@ -51,10 +51,6 @@ export default function AlbumDetailPage() {
   const [availableModels, setAvailableModels] = useState<AvailableModel[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL);
 
-  // 얼굴 사진
-  const [groomImage, setGroomImage] = useState<File | null>(null);
-  const [brideImage, setBrideImage] = useState<File | null>(null);
-
   // 적용 모달
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [applyToast, setApplyToast] = useState<string | null>(null);
@@ -234,10 +230,6 @@ export default function AlbumDetailPage() {
           album={album}
           credits={credits}
           selectedModel={selectedModel}
-          groomImage={groomImage}
-          brideImage={brideImage}
-          onGroomImageChange={setGroomImage}
-          onBrideImageChange={setBrideImage}
           onCreditsChange={setCredits}
           onRefreshAlbum={fetchAlbum}
           onShowApplyModal={() => setShowApplyModal(true)}

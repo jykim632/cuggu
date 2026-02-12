@@ -13,17 +13,19 @@ import {
   Loader2,
   FolderPlus,
   Tag,
+  ImagePlus,
 } from 'lucide-react';
 import { createId } from '@paralleldrive/cuid2';
-import { AIStyle, PersonRole, SnapType, SNAP_TYPES, AlbumImage, AlbumGroup, AI_STYLES, PRESET_TAGS } from '@/types/ai';
-import { StyleSelector } from './StyleSelector';
-import { AIPhotoUploader } from './AIPhotoUploader';
-import { AIStreamingGallery } from '@/components/ai/AIStreamingGallery';
-import { AIResultGallery } from '@/components/ai/AIResultGallery';
+import { AIStyle, PersonRole, SnapType, SNAP_TYPES, AlbumImage, AlbumGroup, AI_STYLES, ReferencePhoto } from '@/types/ai';
 import { AlbumCuration } from './AlbumCuration';
 import { GenerationCard } from './GenerationCard';
+import { GenerationWizard, WizardConfig } from './GenerationWizard';
+import { BatchGenerationView } from './BatchGenerationView';
+import { GenerationFloatingBar } from './GenerationFloatingBar';
+import { CreditDisplay } from './CreditDisplay';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useConfirm } from '@/hooks/useConfirm';
+import { useAIGeneration } from '@/hooks/useAIGeneration';
 
 // ── Types ──
 
@@ -46,38 +48,10 @@ interface Generation {
   createdAt: string;
 }
 
-interface RoleState {
-  image: File | null;
-  style: AIStyle | null;
-  generating: boolean;
-  streamingUrls: (string | null)[];
-  statusMessage: string;
-  resultId: string | null;
-  resultUrls: string[];
-  selectedUrls: string[];
-  error: string | null;
-}
-
-const initialRoleState: RoleState = {
-  image: null,
-  style: null,
-  generating: false,
-  streamingUrls: [null, null],
-  statusMessage: '',
-  resultId: null,
-  resultUrls: [],
-  selectedUrls: [],
-  error: null,
-};
-
 interface AlbumDashboardProps {
   album: Album;
   credits: number;
   selectedModel: string;
-  groomImage: File | null;
-  brideImage: File | null;
-  onGroomImageChange: (file: File | null) => void;
-  onBrideImageChange: (file: File | null) => void;
   onCreditsChange: (credits: number) => void;
   onRefreshAlbum: () => void;
   onShowApplyModal: () => void;
@@ -87,17 +61,11 @@ export function AlbumDashboard({
   album,
   credits,
   selectedModel,
-  groomImage,
-  brideImage,
-  onGroomImageChange,
-  onBrideImageChange,
   onCreditsChange,
   onRefreshAlbum,
   onShowApplyModal,
 }: AlbumDashboardProps) {
   // ── State ──
-  const [groom, setGroom] = useState<RoleState>({ ...initialRoleState, image: groomImage });
-  const [bride, setBride] = useState<RoleState>({ ...initialRoleState, image: brideImage });
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(album.name);
   const [showGenerate, setShowGenerate] = useState(false);
@@ -117,17 +85,42 @@ export function AlbumDashboard({
   const [activeGroupFilter, setActiveGroupFilter] = useState<string | null>(null);
   const { confirm, isOpen: confirmOpen, options: confirmOptions, handleConfirm: onConfirm, handleCancel: onCancel } = useConfirm();
 
-  const IS_DEV = process.env.NODE_ENV === 'development';
-  const snapType = album.snapType as SnapType | null;
-  const anyGenerating = groom.generating || bride.generating;
+  // 참조 사진
+  const [referencePhotos, setReferencePhotos] = useState<ReferencePhoto[]>([]);
+  const [refPhotosLoading, setRefPhotosLoading] = useState(true);
 
-  // Sync groom/bride images from parent
+  // 생성 wizard
+  const [showWizard, setShowWizard] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+
+  const snapType = album.snapType as SnapType | null;
+
+  // ── useAIGeneration hook ──
+  const generation = useAIGeneration({
+    albumId: album.id,
+    modelId: selectedModel,
+    onCreditsChange,
+    onComplete: onRefreshAlbum,
+  });
+
+  // ── 참조 사진 로드 ──
   useEffect(() => {
-    setGroom((prev) => ({ ...prev, image: groomImage }));
-  }, [groomImage]);
-  useEffect(() => {
-    setBride((prev) => ({ ...prev, image: brideImage }));
-  }, [brideImage]);
+    const fetchRefPhotos = async () => {
+      try {
+        setRefPhotosLoading(true);
+        const res = await fetch('/api/ai/reference-photos');
+        const data = await res.json();
+        if (data.success) {
+          setReferencePhotos(data.data);
+        }
+      } catch {
+        // 실패 시 무시
+      } finally {
+        setRefPhotosLoading(false);
+      }
+    };
+    fetchRefPhotos();
+  }, []);
 
   // Sync album data when album prop changes
   useEffect(() => {
@@ -274,119 +267,37 @@ export function AlbumDashboard({
     saveCuration(updated, groups, exists ? '사진 삭제' : '사진 추가');
   }, [curatedImages, groups, saveCuration]);
 
-  // ── SSE 생성 ──
-  const handleGenerate = useCallback(async (role: PersonRole) => {
-    const state = role === 'GROOM' ? groom : bride;
-    const update = role === 'GROOM' ? setGroom : setBride;
-
-    if (!state.image || !state.style) return;
-    if (!IS_DEV && credits === 0) {
-      update((prev) => ({ ...prev, error: '크레딧이 부족합니다.' }));
-      return;
-    }
-
-    update((prev) => ({
-      ...prev,
-      generating: true,
-      error: null,
-      streamingUrls: [null, null],
-      statusMessage: '준비 중...',
-      resultId: null,
-      resultUrls: [],
-      selectedUrls: [],
-    }));
+  // ── Wizard 생성 콜백 ──
+  const handleWizardGenerate = useCallback(async (config: WizardConfig) => {
+    setShowWizard(false);
+    setIsMinimized(false);
 
     try {
-      const formData = new FormData();
-      formData.append('image', state.image);
-      formData.append('style', state.style);
-      formData.append('role', role);
-      formData.append('modelId', selectedModel);
-      formData.append('albumId', album.id);
-
-      const res = await fetch('/api/ai/generate/stream', {
+      const res = await fetch('/api/ai/jobs', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          albumId: album.id,
+          mode: config.mode,
+          styles: config.styles,
+          roles: config.roles,
+          modelId: selectedModel,
+          totalImages: config.totalImages,
+          referencePhotoIds: referencePhotos.map((p) => p.id),
+        }),
       });
 
-      if (!res.ok || !res.body) {
-        const errorData = await res.json().catch(() => ({}));
-        if (res.status === 402) throw new Error('크레딧이 부족합니다');
-        if (res.status === 400) throw new Error(errorData.error || '얼굴을 감지할 수 없습니다');
-        if (res.status === 429) throw new Error('요청이 너무 많습니다. 잠시 후 다시 시도해주세요');
-        throw new Error(errorData.error || '스트리밍 연결 실패');
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || '작업 생성에 실패했습니다');
       }
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          try {
-            const data = JSON.parse(line.slice(6));
-
-            switch (data.type) {
-              case 'status':
-                update((prev) => ({ ...prev, statusMessage: data.message }));
-                break;
-              case 'image':
-                update((prev) => {
-                  const next = [...prev.streamingUrls];
-                  next[data.index] = data.url;
-                  return { ...prev, streamingUrls: next, statusMessage: `${data.progress}/${data.total}장 생성 완료` };
-                });
-                break;
-              case 'done':
-                update((prev) => ({
-                  ...prev,
-                  generating: false,
-                  resultId: data.id,
-                  resultUrls: data.generatedUrls,
-                }));
-                onCreditsChange(data.remainingCredits);
-                onRefreshAlbum();
-                break;
-              case 'error':
-                throw new Error(data.error);
-            }
-          } catch {
-            // JSON 파싱 실패 무시
-          }
-        }
-      }
+      const { data } = await res.json();
+      generation.generateBatch(data.jobId, data.tasks);
     } catch (err) {
-      update((prev) => ({
-        ...prev,
-        generating: false,
-        error: err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다',
-      }));
+      console.error('Job creation failed:', err);
     }
-  }, [groom, bride, credits, selectedModel, album.id, IS_DEV, onCreditsChange, onRefreshAlbum]);
-
-  const handleRegenerate = async (role: PersonRole) => {
-    const update = role === 'GROOM' ? setGroom : setBride;
-    update((prev) => ({ ...prev, resultId: null, resultUrls: [], selectedUrls: [] }));
-    await handleGenerate(role);
-  };
-
-  const handleToggleImage = (role: PersonRole, url: string) => {
-    const update = role === 'GROOM' ? setGroom : setBride;
-    update((prev) => {
-      const selected = prev.selectedUrls.includes(url)
-        ? prev.selectedUrls.filter((u) => u !== url)
-        : [...prev.selectedUrls, url];
-      return { ...prev, selectedUrls: selected };
-    });
-  };
+  }, [album.id, selectedModel, referencePhotos, generation]);
 
   // ── 레거시 기록 로드 ──
   const loadLegacy = async () => {
@@ -446,6 +357,8 @@ export function AlbumDashboard({
   const allTags = Array.from(
     new Set(curatedImages.flatMap((img) => img.tags ?? []))
   );
+
+  const hasRefPhotos = referencePhotos.length > 0;
 
   return (
     <div className="space-y-8">
@@ -688,94 +601,82 @@ export function AlbumDashboard({
         </button>
 
         {showGenerate && (
-          <div className="space-y-6 rounded-xl border border-stone-200 bg-stone-50 p-6">
-            {/* 사진 업로드 */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <AIPhotoUploader
-                role="GROOM"
-                image={groom.image}
-                onImageChange={onGroomImageChange}
-                disabled={anyGenerating}
-              />
-              <AIPhotoUploader
-                role="BRIDE"
-                image={bride.image}
-                onImageChange={onBrideImageChange}
-                disabled={anyGenerating}
-              />
-            </div>
-
-            {/* 스타일 선택 + 생성 (역할별) */}
-            {['GROOM', 'BRIDE'].map((r) => {
-              const role = r as PersonRole;
-              const state = role === 'GROOM' ? groom : bride;
-              const update = role === 'GROOM' ? setGroom : setBride;
-              const roleLabel = role === 'GROOM' ? '신랑' : '신부';
-
-              if (!state.image) return null;
-
-              // 생성 중
-              if (state.generating) {
-                return (
-                  <div key={role}>
-                    <AIStreamingGallery
-                      role={role}
-                      images={state.streamingUrls}
-                      statusMessage={state.statusMessage}
-                      originalImage={state.image}
-                    />
-                  </div>
-                );
-              }
-
-              // 결과 있음
-              if (state.resultUrls.length > 0) {
-                return (
-                  <div key={role}>
-                    <AIResultGallery
-                      role={role}
-                      images={state.resultUrls}
-                      selectedImages={state.selectedUrls}
-                      onToggleImage={(url) => handleToggleImage(role, url)}
-                      onRegenerate={() => handleRegenerate(role)}
-                      remainingCredits={credits}
-                      disabled={anyGenerating}
-                    />
-                  </div>
-                );
-              }
-
-              // 스타일 선택 + 생성 버튼
-              return (
-                <div key={role} className="space-y-4">
-                  <h4 className="text-sm font-medium text-stone-700">{roleLabel} 스타일</h4>
-                  <StyleSelector
-                    selectedStyle={state.style}
-                    onStyleSelect={(style) => update((prev) => ({ ...prev, style }))}
-                    disabled={anyGenerating}
-                    snapType={snapType}
-                  />
-
-                  {state.error && (
-                    <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{state.error}</div>
-                  )}
-
-                  {state.style && (
-                    <button
-                      onClick={() => handleGenerate(role)}
-                      disabled={anyGenerating || (!IS_DEV && credits === 0)}
-                      className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-rose-600 hover:bg-rose-700 disabled:bg-stone-300 text-white text-sm font-medium rounded-xl transition-colors"
-                    >
-                      <Sparkles className="w-4 h-4" />
-                      {roleLabel} AI 사진 생성 (1 크레딧)
-                    </button>
-                  )}
+          <div className="space-y-4">
+            {refPhotosLoading ? (
+              <div className="flex items-center justify-center py-8 gap-2 text-stone-400">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-sm">참조 사진 확인 중...</span>
+              </div>
+            ) : !hasRefPhotos ? (
+              /* 참조 사진 없음 안내 */
+              <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-stone-300 bg-stone-50 py-10 px-6">
+                <ImagePlus className="w-8 h-8 text-stone-300" />
+                <div className="text-center">
+                  <p className="text-sm font-medium text-stone-700">참조 사진을 먼저 업로드하세요</p>
+                  <p className="text-xs text-stone-500 mt-1">
+                    AI가 얼굴을 학습하려면 신랑/신부 참조 사진이 필요합니다.
+                  </p>
                 </div>
-              );
-            })}
+                <a
+                  href="/dashboard/ai-photos/reference"
+                  className="flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-rose-700"
+                >
+                  <ImagePlus className="w-4 h-4" />
+                  참조 사진 등록하기
+                </a>
+              </div>
+            ) : generation.state.isGenerating && !isMinimized ? (
+              /* 생성 진행 중 (확장 뷰) */
+              <BatchGenerationView
+                totalImages={generation.state.totalImages}
+                completedUrls={generation.state.completedUrls}
+                currentIndex={generation.state.currentIndex}
+                statusMessage={generation.state.statusMessage}
+                error={generation.state.error}
+                onMinimize={() => setIsMinimized(true)}
+              />
+            ) : !showWizard ? (
+              /* Wizard 시작 버튼 */
+              <div className="flex flex-col items-center gap-3 rounded-xl border border-stone-200 bg-stone-50 py-8 px-6">
+                <CreditDisplay balance={credits} />
+                <p className="text-xs text-stone-500">
+                  참조 사진 {referencePhotos.length}장 등록됨 ({referencePhotos.map((p) => p.role === 'GROOM' ? '신랑' : '신부').join(', ')})
+                </p>
+                <button
+                  onClick={() => setShowWizard(true)}
+                  disabled={generation.state.isGenerating}
+                  className="flex items-center gap-2 rounded-lg bg-rose-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-rose-700 disabled:bg-stone-300"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  촬영 설정
+                </button>
+              </div>
+            ) : (
+              /* Wizard */
+              <GenerationWizard
+                credits={credits}
+                referencePhotos={referencePhotos.map((p) => ({ id: p.id, role: p.role }))}
+                snapType={snapType}
+                onGenerate={handleWizardGenerate}
+                onCancel={() => setShowWizard(false)}
+                disabled={generation.state.isGenerating}
+              />
+            )}
           </div>
         )}
       </div>
+
+      {/* ── 생성 중 최소화 바 ── */}
+      {generation.state.isGenerating && isMinimized && (
+        <GenerationFloatingBar
+          completedCount={generation.state.completedUrls.length}
+          totalImages={generation.state.totalImages}
+          onExpand={() => {
+            setIsMinimized(false);
+            setShowGenerate(true);
+          }}
+        />
+      )}
 
       {/* ── 레거시 섹션 ── */}
       <div className="space-y-3">
