@@ -136,6 +136,48 @@ export interface AlbumImage {
 export const PRESET_TAGS = ['베스트샷', '미공개', '인스타용', '청첩장용', '프로필'] as const;
 export type PresetTag = typeof PRESET_TAGS[number];
 
+// ── Job Types ──
+
+export type JobMode = 'SINGLE' | 'BATCH';
+export type JobStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'PARTIAL' | 'FAILED' | 'CANCELLED';
+export type CreditTxType = 'DEDUCT' | 'REFUND' | 'PURCHASE' | 'BONUS';
+
+export interface JobConfig {
+  snapType?: SnapType;
+  styles: AIStyle[];
+  roles: PersonRole[];
+  modelId?: string;
+  groomRefId?: string;
+  brideRefId?: string;
+}
+
+export interface JobTask {
+  index: number;
+  style: AIStyle;
+  role: PersonRole;
+  referencePhotoId: string;
+}
+
+export interface ReferencePhoto {
+  id: string;
+  role: PersonRole;
+  originalUrl: string;
+  faceDetected: boolean;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface CreditTransaction {
+  id: string;
+  type: CreditTxType;
+  amount: number;
+  balanceAfter: number;
+  referenceType: string | null;
+  referenceId: string | null;
+  description: string | null;
+  createdAt: string;
+}
+
 // ── Constants ──
 
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB

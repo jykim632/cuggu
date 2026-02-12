@@ -4,10 +4,14 @@ import { Check } from 'lucide-react';
 import { AIStyle, AI_STYLES, SnapType, SNAP_TYPES } from '@/types/ai';
 
 interface StyleSelectorProps {
-  selectedStyle: AIStyle | null;
-  onStyleSelect: (style: AIStyle) => void;
+  selectedStyle?: AIStyle | null;
+  onStyleSelect?: (style: AIStyle) => void;
   disabled?: boolean;
   snapType?: SnapType | null;
+  /** 멀티셀렉트 모드 */
+  multiSelect?: boolean;
+  selectedStyles?: AIStyle[];
+  onStylesChange?: (styles: AIStyle[]) => void;
 }
 
 export function StyleSelector({
@@ -15,6 +19,9 @@ export function StyleSelector({
   onStyleSelect,
   disabled = false,
   snapType,
+  multiSelect = false,
+  selectedStyles = [],
+  onStylesChange,
 }: StyleSelectorProps) {
   // snapType이 지정되면 해당 타입의 스타일만 필터링
   const filteredStyles = snapType
@@ -30,12 +37,26 @@ export function StyleSelector({
 
       <div className="grid grid-cols-2 gap-2">
         {filteredStyles.map((style) => {
-          const isSelected = selectedStyle === style.value;
+          const isSelected = multiSelect
+            ? selectedStyles.includes(style.value)
+            : selectedStyle === style.value;
+
+          const handleClick = () => {
+            if (disabled) return;
+            if (multiSelect && onStylesChange) {
+              const next = isSelected
+                ? selectedStyles.filter((s) => s !== style.value)
+                : [...selectedStyles, style.value];
+              onStylesChange(next);
+            } else if (onStyleSelect) {
+              onStyleSelect(style.value);
+            }
+          };
 
           return (
             <button
               key={style.value}
-              onClick={() => !disabled && onStyleSelect(style.value)}
+              onClick={handleClick}
               disabled={disabled}
               className={`
                 relative rounded-lg border-2 px-3 py-2.5 text-left transition-colors

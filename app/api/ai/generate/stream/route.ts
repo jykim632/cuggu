@@ -1,8 +1,8 @@
 import { NextRequest } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/db';
-import { users, aiGenerations } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { users, aiGenerations, aiGenerationJobs, aiReferencePhotos } from '@/db/schema';
+import { eq, sql } from 'drizzle-orm';
 import { checkCreditsFromUser, deductCredits, refundCredits } from '@/lib/ai/credits';
 import { detectFace } from '@/lib/ai/face-detection';
 import { uploadToS3, copyToS3 } from '@/lib/ai/s3';
@@ -82,14 +82,22 @@ export async function POST(request: NextRequest) {
 
       // 4. FormData 파싱
       const formData = await request.formData();
-      const image = formData.get('image') as File;
+      const image = formData.get('image') as File | null;
       const styleRaw = formData.get('style') as string;
       const role = formData.get('role') as string;
       const modelId = formData.get('modelId') as string | null;
       const albumId = formData.get('albumId') as string | null;
+      const jobId = formData.get('jobId') as string | null;
+      const referencePhotoId = formData.get('referencePhotoId') as string | null;
 
-      if (!image || !styleRaw || !role) {
-        await sendEvent('error', { error: 'Image, style, and role are required' });
+      if (!styleRaw || !role) {
+        await sendEvent('error', { error: 'Style and role are required' });
+        await writer.close();
+        return;
+      }
+
+      if (!image && !referencePhotoId) {
+        await sendEvent('error', { error: 'Image or referencePhotoId is required' });
         await writer.close();
         return;
       }
@@ -110,64 +118,88 @@ export async function POST(request: NextRequest) {
       const styleData = styleValidation.data;
       style = styleData;
 
-      // 5. 파일 검증
-      if (!AI_CONFIG.ALLOWED_MIME_TYPES.includes(image.type as any)) {
-        await sendEvent('error', { error: 'JPG, PNG 파일만 업로드 가능합니다' });
-        await writer.close();
-        return;
+      // 4.5 참조 사진 조회 (referencePhotoId가 있을 때)
+      let originalUrl: string | undefined;
+
+      if (referencePhotoId) {
+        const refPhoto = await db.query.aiReferencePhotos.findFirst({
+          where: eq(aiReferencePhotos.id, referencePhotoId),
+        });
+
+        if (!refPhoto || refPhoto.userId !== user.id) {
+          await sendEvent('error', { error: 'Reference photo not found' });
+          await writer.close();
+          return;
+        }
+
+        originalUrl = refPhoto.originalUrl;
       }
 
-      if (image.size > AI_CONFIG.MAX_FILE_SIZE) {
-        await sendEvent('error', { error: 'File too large (max 10MB)' });
-        await writer.close();
-        return;
-      }
+      // 5. 파일 검증 (referencePhotoId가 없을 때만)
+      if (!referencePhotoId) {
+        const uploadedImage = image!;
 
-      const arrayBuffer = await image.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
+        if (!AI_CONFIG.ALLOWED_MIME_TYPES.includes(uploadedImage.type as any)) {
+          await sendEvent('error', { error: 'JPG, PNG 파일만 업로드 가능합니다' });
+          await writer.close();
+          return;
+        }
 
-      if (!isValidImageBuffer(buffer)) {
-        await sendEvent('error', { error: '유효하지 않은 이미지 파일입니다' });
-        await writer.close();
-        return;
-      }
+        if (uploadedImage.size > AI_CONFIG.MAX_FILE_SIZE) {
+          await sendEvent('error', { error: 'File too large (max 10MB)' });
+          await writer.close();
+          return;
+        }
 
-      // 6. 크레딧 확인
-      if (!IS_DEV) {
-        const { hasCredits, balance } = checkCreditsFromUser(user);
-        if (!hasCredits) {
-          await sendEvent('error', { error: 'Insufficient credits', balance });
+        const arrayBuffer = await uploadedImage.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+
+        if (!isValidImageBuffer(buffer)) {
+          await sendEvent('error', { error: '유효하지 않은 이미지 파일입니다' });
+          await writer.close();
+          return;
+        }
+
+        // 7. 얼굴 감지 (참조 이미지 지원 모델만)
+        if (modelSupportsReferenceImage(modelId || undefined)) {
+          await sendEvent('status', { message: '얼굴 분석 중...' });
+          const faceResult = await detectFace(buffer);
+          if (!faceResult.success) {
+            await sendEvent('error', { error: faceResult.error });
+            await writer.close();
+            return;
+          }
+        }
+
+        // 9. S3 업로드
+        await sendEvent('status', { message: '이미지 준비 중...' });
+        try {
+          const s3UploadResult = await uploadToS3(buffer, uploadedImage.type, 'ai-originals');
+          originalUrl = s3UploadResult.url;
+        } catch (error) {
+          if (creditsDeducted) {
+            await refundCredits(user.id, 1);
+          }
+          await sendEvent('error', { error: 'S3 업로드 실패' });
           await writer.close();
           return;
         }
       }
 
-      // 7. 얼굴 감지 (참조 이미지 지원 모델만)
-      if (modelSupportsReferenceImage(modelId || undefined)) {
-        await sendEvent('status', { message: '얼굴 분석 중...' });
-        const faceResult = await detectFace(buffer);
-        if (!faceResult.success) {
-          await sendEvent('error', { error: faceResult.error });
-          await writer.close();
-          return;
+      // 6. 크레딧 확인 & 차감 (jobId가 없을 때만 — Job은 이미 예약됨)
+      if (!jobId) {
+        if (!IS_DEV) {
+          const { hasCredits, balance } = checkCreditsFromUser(user);
+          if (!hasCredits) {
+            await sendEvent('error', { error: 'Insufficient credits', balance });
+            await writer.close();
+            return;
+          }
         }
-      }
 
-      // 8. 크레딧 차감
-      await deductCredits(user.id, 1);
-      creditsDeducted = true;
-
-      // 9. S3 업로드
-      await sendEvent('status', { message: '이미지 준비 중...' });
-      let originalUrl: string;
-      try {
-        const result = await uploadToS3(buffer, image.type, 'ai-originals');
-        originalUrl = result.url;
-      } catch (error) {
-        await refundCredits(user.id, 1);
-        await sendEvent('error', { error: 'S3 업로드 실패' });
-        await writer.close();
-        return;
+        // 8. 크레딧 차감
+        await deductCredits(user.id, 1);
+        creditsDeducted = true;
       }
 
       // 10. AI 생성 (스트리밍)
@@ -179,7 +211,7 @@ export async function POST(request: NextRequest) {
 
       try {
         const result = await generateWeddingPhotosStream(
-          originalUrl,
+          originalUrl!,
           styleData,
           role as 'GROOM' | 'BRIDE',
           async (index, generatedUrl) => {
@@ -213,12 +245,13 @@ export async function POST(request: NextRequest) {
           .insert(aiGenerations)
           .values({
             userId: user.id,
-            originalUrl,
+            originalUrl: originalUrl!,
             style: styleData,
             role: role as 'GROOM' | 'BRIDE',
             generatedUrls: persistedUrls,
             modelId: selectedModel?.id ?? modelId ?? null,
             albumId: albumId || null,
+            jobId: jobId || null,
             status: 'COMPLETED',
             creditsUsed: 1,
             cost: result.cost,
@@ -228,6 +261,24 @@ export async function POST(request: NextRequest) {
             completedAt: new Date(),
           })
           .returning();
+
+        // 11.5 Job 진행 상황 업데이트
+        let jobProgress: { completed: number; total: number } | undefined;
+        if (jobId) {
+          await db.update(aiGenerationJobs).set({
+            completedImages: sql`${aiGenerationJobs.completedImages} + 1`,
+            creditsUsed: sql`${aiGenerationJobs.creditsUsed} + 1`,
+            status: 'PROCESSING',
+          }).where(eq(aiGenerationJobs.id, jobId));
+
+          const updatedJob = await db.query.aiGenerationJobs.findFirst({
+            where: eq(aiGenerationJobs.id, jobId),
+            columns: { completedImages: true, totalImages: true },
+          });
+          if (updatedJob) {
+            jobProgress = { completed: updatedJob.completedImages, total: updatedJob.totalImages };
+          }
+        }
 
         // 12. 완료
         const remainingCredits = IS_DEV ? 999 : (
@@ -244,19 +295,30 @@ export async function POST(request: NextRequest) {
           style: styleData,
           albumId: albumId || null,
           remainingCredits,
+          ...(jobProgress && { jobProgress }),
         });
 
       } catch (error) {
-        // AI 생성 실패 시 환불
-        await refundCredits(user.id, 1);
+        // AI 생성 실패 시 환불 (jobId가 있으면 크레딧 차감을 안 했으므로 환불 불필요)
+        if (!jobId) {
+          await refundCredits(user.id, 1);
+        }
+
+        // Job 실패 카운트 업데이트
+        if (jobId) {
+          await db.update(aiGenerationJobs).set({
+            failedImages: sql`${aiGenerationJobs.failedImages} + 1`,
+          }).where(eq(aiGenerationJobs.id, jobId));
+        }
 
         await db.insert(aiGenerations).values({
           userId: user.id,
-          originalUrl,
+          originalUrl: originalUrl!,
           style: styleData,
           role: role as 'GROOM' | 'BRIDE',
           modelId: selectedModel?.id ?? modelId ?? null,
           albumId: albumId || null,
+          jobId: jobId || null,
           status: 'FAILED',
           creditsUsed: 0,
           cost: 0,

@@ -264,20 +264,22 @@ export type TossPaymentErrorResponse = z.infer<typeof TossPaymentErrorResponseSc
 
 /**
  * 결제 금액 정의
+ * 1크레딧 = 1장 생성 기준. 가격은 비즈니스 결정에 따라 추후 조정.
  */
 export const PAYMENT_AMOUNTS = {
   PREMIUM_UPGRADE: 9900, // 9,900원
-  AI_CREDITS: 1000, // 1,000원/회
-  AI_CREDITS_BUNDLE: 8000, // 10회 패키지 8,000원 (20% 할인)
+  AI_CREDITS: 1000, // 1,000원 / 1크레딧(1장)
+  AI_CREDITS_BUNDLE: 8000, // 10크레딧(10장) 패키지 8,000원 (20% 할인)
 } as const;
 
 /**
  * 결제 타입별 크레딧 부여
+ * 1크레딧 = 1장 생성
  */
 export const CREDITS_GRANTED = {
-  PREMIUM_UPGRADE: 10, // 프리미엄: 10회
-  AI_CREDITS: 1, // 단일: 1회
-  AI_CREDITS_BUNDLE: 10, // 번들: 10회
+  PREMIUM_UPGRADE: 10, // 프리미엄: 10크레딧(10장)
+  AI_CREDITS: 1, // 단일: 1크레딧(1장)
+  AI_CREDITS_BUNDLE: 10, // 번들: 10크레딧(10장)
 } as const;
 
 /**

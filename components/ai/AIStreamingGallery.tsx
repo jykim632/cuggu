@@ -57,7 +57,7 @@ export function AIStreamingGallery({
               </div>
               <div className="flex items-center gap-2 text-xs text-stone-500">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                {completedCount}/4
+                {completedCount}/{images.length}
               </div>
             </div>
           </div>
@@ -119,7 +119,7 @@ export function AIStreamingGallery({
           <div className="h-1.5 overflow-hidden rounded-full bg-stone-100">
             <div
               className="h-full bg-pink-500 transition-all duration-500"
-              style={{ width: `${(completedCount / 4) * 100}%` }}
+              style={{ width: `${(completedCount / images.length) * 100}%` }}
             />
           </div>
           <p className="text-xs text-stone-400 text-center">

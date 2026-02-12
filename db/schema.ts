@@ -83,6 +83,22 @@ export const aiThemeStatusEnum = pgEnum('ai_theme_status', [
 
 export const aiAlbumStatusEnum = pgEnum('ai_album_status', ['draft', 'completed', 'applied']);
 
+export const aiJobModeEnum = pgEnum('ai_job_mode', ['SINGLE', 'BATCH']);
+export const aiJobStatusEnum = pgEnum('ai_job_status', [
+  'PENDING',
+  'PROCESSING',
+  'COMPLETED',
+  'PARTIAL',
+  'FAILED',
+  'CANCELLED',
+]);
+export const aiCreditTxTypeEnum = pgEnum('ai_credit_tx_type', [
+  'DEDUCT',
+  'REFUND',
+  'PURCHASE',
+  'BONUS',
+]);
+
 export const paymentTypeEnum = pgEnum('payment_type', [
   'PREMIUM_UPGRADE',
   'AI_CREDITS',
@@ -115,7 +131,7 @@ export const users = pgTable('users', {
   image: varchar('image', { length: 500 }), // NextAuth required (profile image)
   role: userRoleEnum('role').default('USER').notNull(),
   premiumPlan: premiumPlanEnum('premium_plan').default('FREE').notNull(),
-  aiCredits: integer('ai_credits').default(2).notNull(),
+  aiCredits: integer('ai_credits').default(5).notNull(),
   emailNotifications: boolean('email_notifications').default(true).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -252,6 +268,8 @@ export const aiGenerations = pgTable(
 
     albumId: varchar('album_id', { length: 128 })
       .references(() => aiAlbums.id, { onDelete: 'set null' }),
+    jobId: varchar('job_id', { length: 128 })
+      .references(() => aiGenerationJobs.id, { onDelete: 'set null' }),
 
     createdAt: timestamp('created_at').defaultNow().notNull(),
     completedAt: timestamp('completed_at'),
@@ -298,6 +316,66 @@ export interface AlbumGroup {
   name: string;
   sortOrder: number;
 }
+
+// 5.6 AI Reference Photos (참조 사진 — 한 번 업로드 후 재사용)
+export const aiReferencePhotos = pgTable('ai_reference_photos', {
+  id: varchar('id', { length: 128 }).primaryKey().$defaultFn(() => createId()),
+  userId: varchar('user_id', { length: 128 }).notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  role: varchar('role', { length: 8 }).notNull(), // 'GROOM' | 'BRIDE'
+  originalUrl: varchar('original_url', { length: 500 }).notNull(),
+  faceDetected: boolean('face_detected').default(false).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  userRoleIdx: index('ai_ref_photos_user_role_idx').on(table.userId, table.role),
+}));
+
+// 5.7 AI Generation Jobs (생성 작업 — 묶음/개별)
+export interface JobConfig {
+  snapType?: string;
+  styles: string[];
+  roles: string[];
+  modelId?: string;
+  groomRefId?: string;
+  brideRefId?: string;
+}
+
+export const aiGenerationJobs = pgTable('ai_generation_jobs', {
+  id: varchar('id', { length: 128 }).primaryKey().$defaultFn(() => createId()),
+  userId: varchar('user_id', { length: 128 }).notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  albumId: varchar('album_id', { length: 128 })
+    .references(() => aiAlbums.id, { onDelete: 'set null' }),
+  mode: aiJobModeEnum('mode').notNull(),
+  config: jsonb('config').default({}).$type<JobConfig>(),
+  totalImages: integer('total_images').notNull(),
+  completedImages: integer('completed_images').default(0).notNull(),
+  failedImages: integer('failed_images').default(0).notNull(),
+  creditsReserved: integer('credits_reserved').notNull(),
+  creditsUsed: integer('credits_used').default(0).notNull(),
+  status: aiJobStatusEnum('status').default('PENDING').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  completedAt: timestamp('completed_at'),
+}, (table) => ({
+  userStatusIdx: index('ai_jobs_user_status_idx').on(table.userId, table.status),
+}));
+
+// 5.8 AI Credit Transactions (크레딧 거래 이력)
+export const aiCreditTransactions = pgTable('ai_credit_transactions', {
+  id: varchar('id', { length: 128 }).primaryKey().$defaultFn(() => createId()),
+  userId: varchar('user_id', { length: 128 }).notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  type: aiCreditTxTypeEnum('type').notNull(),
+  amount: integer('amount').notNull(), // 항상 양수, type으로 방향 구분
+  balanceAfter: integer('balance_after').notNull(),
+  referenceType: varchar('reference_type', { length: 32 }), // JOB | PAYMENT | ADMIN | SYSTEM
+  referenceId: varchar('reference_id', { length: 128 }),
+  description: varchar('description', { length: 255 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  userIdx: index('ai_credit_tx_user_idx').on(table.userId),
+}));
 
 // 6. Payment
 export const payments = pgTable(
@@ -425,6 +503,9 @@ export const usersRelations = relations(users, ({ many }) => ({
   aiGenerations: many(aiGenerations),
   aiAlbums: many(aiAlbums),
   aiThemes: many(aiThemes),
+  aiReferencePhotos: many(aiReferencePhotos),
+  aiGenerationJobs: many(aiGenerationJobs),
+  aiCreditTransactions: many(aiCreditTransactions),
   payments: many(payments),
   accounts: many(accounts),
   sessions: many(sessions),
@@ -463,6 +544,10 @@ export const aiGenerationsRelations = relations(aiGenerations, ({ one }) => ({
     fields: [aiGenerations.albumId],
     references: [aiAlbums.id],
   }),
+  job: one(aiGenerationJobs, {
+    fields: [aiGenerations.jobId],
+    references: [aiGenerationJobs.id],
+  }),
 }));
 
 export const aiAlbumsRelations = relations(aiAlbums, ({ one, many }) => ({
@@ -485,6 +570,32 @@ export const aiThemesRelations = relations(aiThemes, ({ one }) => ({
   invitation: one(invitations, {
     fields: [aiThemes.invitationId],
     references: [invitations.id],
+  }),
+}));
+
+export const aiReferencePhotosRelations = relations(aiReferencePhotos, ({ one }) => ({
+  user: one(users, {
+    fields: [aiReferencePhotos.userId],
+    references: [users.id],
+  }),
+}));
+
+export const aiGenerationJobsRelations = relations(aiGenerationJobs, ({ one, many }) => ({
+  user: one(users, {
+    fields: [aiGenerationJobs.userId],
+    references: [users.id],
+  }),
+  album: one(aiAlbums, {
+    fields: [aiGenerationJobs.albumId],
+    references: [aiAlbums.id],
+  }),
+  generations: many(aiGenerations),
+}));
+
+export const aiCreditTransactionsRelations = relations(aiCreditTransactions, ({ one }) => ({
+  user: one(users, {
+    fields: [aiCreditTransactions.userId],
+    references: [users.id],
   }),
 }));
 

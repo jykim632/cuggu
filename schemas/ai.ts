@@ -242,3 +242,87 @@ export const UpdateAlbumSchema = z.object({
 export const ApplyAlbumSchema = z.object({
   invitationId: z.string().min(1),
 });
+
+// ============================================================
+// Reference Photo Schemas
+// ============================================================
+
+export const CreateReferencePhotoSchema = z.object({
+  role: z.enum(['GROOM', 'BRIDE']),
+});
+
+export const ReferencePhotoSchema = z.object({
+  id: z.string(),
+  role: z.enum(['GROOM', 'BRIDE']),
+  originalUrl: z.string().url(),
+  faceDetected: z.boolean(),
+  isActive: z.boolean(),
+  createdAt: z.date(),
+});
+
+export type ReferencePhotoResponse = z.infer<typeof ReferencePhotoSchema>;
+
+// ============================================================
+// Job Schemas
+// ============================================================
+
+export const JobModeSchema = z.enum(['SINGLE', 'BATCH']);
+export const JobStatusSchema = z.enum([
+  'PENDING', 'PROCESSING', 'COMPLETED', 'PARTIAL', 'FAILED', 'CANCELLED',
+]);
+
+export const CreateJobSchema = z.object({
+  albumId: z.string().min(1),
+  mode: JobModeSchema,
+  styles: z.array(z.string()).min(1),
+  roles: z.array(z.enum(['GROOM', 'BRIDE'])).min(1),
+  modelId: z.string().optional(),
+  totalImages: z.number().int().min(1).max(20),
+  referencePhotoIds: z.array(z.string()).min(1),
+});
+
+export type CreateJobRequest = z.infer<typeof CreateJobSchema>;
+
+export const JobTaskSchema = z.object({
+  index: z.number().int().min(0),
+  style: z.string(),
+  role: z.enum(['GROOM', 'BRIDE']),
+  referencePhotoId: z.string(),
+});
+
+export const JobResponseSchema = z.object({
+  id: z.string(),
+  mode: JobModeSchema,
+  totalImages: z.number(),
+  completedImages: z.number(),
+  failedImages: z.number(),
+  creditsReserved: z.number(),
+  creditsUsed: z.number(),
+  status: JobStatusSchema,
+  tasks: z.array(JobTaskSchema).optional(),
+  createdAt: z.date(),
+});
+
+export type JobResponse = z.infer<typeof JobResponseSchema>;
+
+// ============================================================
+// Credit Transaction Schemas
+// ============================================================
+
+export const CreditTxTypeSchema = z.enum(['DEDUCT', 'REFUND', 'PURCHASE', 'BONUS']);
+
+export const CreditTransactionSchema = z.object({
+  id: z.string(),
+  type: CreditTxTypeSchema,
+  amount: z.number().int(),
+  balanceAfter: z.number().int(),
+  referenceType: z.string().nullable(),
+  referenceId: z.string().nullable(),
+  description: z.string().nullable(),
+  createdAt: z.date(),
+});
+
+export const CreditBalanceResponseSchema = z.object({
+  balance: z.number().int().min(0),
+  transactions: z.array(CreditTransactionSchema),
+});
