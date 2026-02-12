@@ -75,13 +75,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 6. 얼굴 감지
-    const faceResult = await detectFace(buffer);
-    if (!faceResult.success) {
-      return NextResponse.json(
-        { error: faceResult.error },
-        { status: 400 }
-      );
+    // 6. 얼굴 감지 (non-blocking — 실패해도 업로드 진행)
+    let faceDetected = false;
+    let faceWarning: string | undefined;
+    try {
+      const faceResult = await detectFace(buffer);
+      faceDetected = faceResult.success;
+      if (!faceResult.success) {
+        faceWarning = faceResult.error;
+      }
+    } catch (err) {
+      logger.warn('Face detection failed, proceeding anyway', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      faceWarning = '얼굴 감지를 수행할 수 없었습니다';
     }
 
     // 7. S3 업로드
@@ -119,11 +126,15 @@ export async function POST(request: NextRequest) {
         userId: user.id,
         role,
         originalUrl,
-        faceDetected: true,
+        faceDetected,
       })
       .returning();
 
-    return NextResponse.json({ success: true, data: referencePhoto }, { status: 201 });
+    return NextResponse.json({
+      success: true,
+      data: referencePhoto,
+      ...(faceWarning && { warning: faceWarning }),
+    }, { status: 201 });
   } catch (error) {
     logger.error('Reference photo upload error', {
       error: error instanceof Error ? error.message : String(error),
