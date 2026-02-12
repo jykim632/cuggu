@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Sparkles,
   Camera,
@@ -14,9 +14,11 @@ import {
   FolderPlus,
   Tag,
   ImagePlus,
+  Upload,
+  User,
 } from 'lucide-react';
 import { createId } from '@paralleldrive/cuid2';
-import { AIStyle, PersonRole, SnapType, SNAP_TYPES, AlbumImage, AlbumGroup, AI_STYLES, ReferencePhoto } from '@/types/ai';
+import { AIStyle, PersonRole, SnapType, SNAP_TYPES, AlbumImage, AlbumGroup, AI_STYLES, ReferencePhoto, MAX_FILE_SIZE, ALLOWED_FILE_TYPES } from '@/types/ai';
 import { AlbumCuration } from './AlbumCuration';
 import { GenerationCard } from './GenerationCard';
 import { GenerationWizard, WizardConfig } from './GenerationWizard';
@@ -88,6 +90,10 @@ export function AlbumDashboard({
   // 참조 사진
   const [referencePhotos, setReferencePhotos] = useState<ReferencePhoto[]>([]);
   const [refPhotosLoading, setRefPhotosLoading] = useState(true);
+  const [refUploading, setRefUploading] = useState<PersonRole | null>(null);
+  const [refUploadError, setRefUploadError] = useState<string | null>(null);
+  const groomInputRef = useRef<HTMLInputElement>(null);
+  const brideInputRef = useRef<HTMLInputElement>(null);
 
   // 생성 wizard
   const [showWizard, setShowWizard] = useState(false);
@@ -120,6 +126,44 @@ export function AlbumDashboard({
       }
     };
     fetchRefPhotos();
+  }, []);
+
+  // ── 참조 사진 인라인 업로드 ──
+  const handleRefPhotoUpload = useCallback(async (file: File, role: PersonRole) => {
+    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+      setRefUploadError('JPG, PNG, WebP 파일만 업로드 가능합니다');
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      setRefUploadError('파일 크기는 10MB 이하여야 합니다');
+      return;
+    }
+
+    setRefUploading(role);
+    setRefUploadError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('role', role);
+
+      const res = await fetch('/api/ai/reference-photos', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '업로드 실패');
+
+      setReferencePhotos((prev) => {
+        const filtered = prev.filter((p) => p.role !== role);
+        return [...filtered, data.data];
+      });
+    } catch (err) {
+      setRefUploadError(err instanceof Error ? err.message : '업로드 중 오류');
+    } finally {
+      setRefUploading(null);
+    }
   }, []);
 
   // Sync album data when album prop changes
@@ -608,22 +652,89 @@ export function AlbumDashboard({
                 <span className="text-sm">참조 사진 확인 중...</span>
               </div>
             ) : !hasRefPhotos ? (
-              /* 참조 사진 없음 안내 */
-              <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-stone-300 bg-stone-50 py-10 px-6">
-                <ImagePlus className="w-8 h-8 text-stone-300" />
+              /* 참조 사진 인라인 업로드 */
+              <div className="space-y-4 rounded-xl border border-stone-200 bg-stone-50 p-6">
                 <div className="text-center">
                   <p className="text-sm font-medium text-stone-700">참조 사진을 먼저 업로드하세요</p>
                   <p className="text-xs text-stone-500 mt-1">
-                    AI가 얼굴을 학습하려면 신랑/신부 참조 사진이 필요합니다.
+                    AI가 얼굴을 학습하려면 신랑/신부 참조 사진이 필요합니다 (최소 1명)
                   </p>
                 </div>
-                <a
-                  href="/dashboard/ai-photos/reference"
-                  className="flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-rose-700"
-                >
-                  <ImagePlus className="w-4 h-4" />
-                  참조 사진 등록하기
-                </a>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {(['GROOM', 'BRIDE'] as PersonRole[]).map((role) => {
+                    const existing = referencePhotos.find((p) => p.role === role);
+                    const isUploading = refUploading === role;
+                    const label = role === 'GROOM' ? '신랑' : '신부';
+                    const inputRef = role === 'GROOM' ? groomInputRef : brideInputRef;
+
+                    return (
+                      <div key={role} className="space-y-2">
+                        <div className="flex items-center gap-1.5">
+                          <User className="w-3.5 h-3.5 text-stone-400" />
+                          <span className="text-xs font-medium text-stone-600">{label}</span>
+                          {existing && (
+                            <span className="ml-auto text-xs text-emerald-600 flex items-center gap-0.5">
+                              <Check className="w-3 h-3" />
+                              등록됨
+                            </span>
+                          )}
+                        </div>
+
+                        <div
+                          onClick={() => !isUploading && !existing && inputRef.current?.click()}
+                          className={`
+                            relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed
+                            aspect-[3/4] overflow-hidden transition-colors
+                            ${existing ? 'border-transparent' : 'border-stone-200 hover:border-rose-300 cursor-pointer bg-white'}
+                            ${isUploading ? 'pointer-events-none' : ''}
+                          `}
+                        >
+                          <input
+                            ref={inputRef}
+                            type="file"
+                            accept={ALLOWED_FILE_TYPES.join(',')}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleRefPhotoUpload(file, role);
+                            }}
+                            className="hidden"
+                          />
+
+                          {isUploading && (
+                            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-white/80 backdrop-blur-sm">
+                              <Loader2 className="w-5 h-5 animate-spin text-rose-500" />
+                              <span className="text-xs text-stone-500">업로드 중...</span>
+                            </div>
+                          )}
+
+                          {existing ? (
+                            <>
+                              <img src={existing.originalUrl} alt={`${label} 참조`} className="h-full w-full object-cover rounded-xl" />
+                              <button
+                                onClick={(e) => { e.stopPropagation(); inputRef.current?.click(); }}
+                                className="absolute bottom-2 inset-x-2 z-10 rounded-lg bg-black/50 py-1.5 text-xs font-medium text-white hover:bg-black/70 transition-colors"
+                              >
+                                변경
+                              </button>
+                            </>
+                          ) : (
+                            <div className="flex flex-col items-center gap-2 p-4 text-center">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-stone-100">
+                                <Camera className="w-5 h-5 text-stone-400" />
+                              </div>
+                              <p className="text-xs text-stone-500">탭하여 {label} 사진 등록</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {refUploadError && (
+                  <p className="text-xs text-red-500 text-center">{refUploadError}</p>
+                )}
               </div>
             ) : generation.state.isGenerating && !isMinimized ? (
               /* 생성 진행 중 (확장 뷰) */
