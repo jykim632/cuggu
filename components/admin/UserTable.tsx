@@ -13,7 +13,7 @@ export function UserTable({ users, onAction }: UserTableProps) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   return (
-    <div className="overflow-x-auto overflow-y-visible">
+    <div>
       <table className="w-full">
         <thead>
           <tr className="border-b border-stone-200 text-left text-sm text-stone-500">
