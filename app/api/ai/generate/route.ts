@@ -120,16 +120,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 6. 크레딧 확인 (개발 모드는 스킵)
-    const isDev = process.env.NODE_ENV === 'development';
-    if (!isDev) {
-      const { hasCredits, balance } = checkCreditsFromUser(user);
-      if (!hasCredits) {
-        return NextResponse.json(
-          { error: 'Insufficient credits', balance },
-          { status: 402 } // Payment Required
-        );
-      }
+    // 6. 크레딧 확인
+    const { hasCredits, balance } = checkCreditsFromUser(user);
+    if (!hasCredits) {
+      return NextResponse.json(
+        { error: 'Insufficient credits', balance },
+        { status: 402 } // Payment Required
+      );
     }
 
     // 8. 얼굴 감지 (참조 이미지 지원 모델만)
@@ -154,7 +151,7 @@ export async function POST(request: NextRequest) {
     // 10. 원본 이미지 S3 업로드
     let originalUrl: string;
     try {
-      const result = await uploadToS3(buffer, image.type, 'ai-originals');
+      const result = await uploadToS3(buffer, image.type, `ai-originals/${user.id}`);
       originalUrl = result.url;
     } catch (error) {
       // 업로드 실패 시 크레딧 환불
@@ -243,15 +240,12 @@ export async function POST(request: NextRequest) {
       })
       .returning();
 
-    // 14. 잔여 크레딧 조회 (개발 모드는 999)
-    let remainingCredits = 999;
-    if (!isDev) {
-      const updatedUser = await db.query.users.findFirst({
-        where: eq(users.id, user.id),
-        columns: { aiCredits: true },
-      });
-      remainingCredits = updatedUser?.aiCredits ?? 0;
-    }
+    // 14. 잔여 크레딧 조회
+    const updatedUser = await db.query.users.findFirst({
+      where: eq(users.id, user.id),
+      columns: { aiCredits: true },
+    });
+    const remainingCredits = updatedUser?.aiCredits ?? 0;
 
     // 15. 응답
     return NextResponse.json({

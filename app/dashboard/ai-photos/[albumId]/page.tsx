@@ -73,7 +73,8 @@ export default function AlbumDetailPage() {
 
   const fetchAlbum = useCallback(async () => {
     try {
-      setLoading(true);
+      // loading은 초기값 true → 첫 fetch 후 false. refresh 시에는 건드리지 않아
+      // AlbumDashboard가 unmount되면 생성 진행 상태가 날아가기 때문.
       const res = await fetch(`/api/ai/albums/${albumId}`);
       const data = await res.json();
       if (!res.ok) {

@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     // 7. S3 업로드
     let originalUrl: string;
     try {
-      const result = await uploadToS3(buffer, image.type, 'ai-reference-photos');
+      const result = await uploadToS3(buffer, image.type, `ai-reference-photos/${user.id}`);
       originalUrl = result.url;
     } catch (error) {
       logger.error('Reference photo S3 upload failed', {

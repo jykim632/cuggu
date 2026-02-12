@@ -6,24 +6,21 @@ import {
   Camera,
   ChevronDown,
   ChevronUp,
-  Plus,
   Pencil,
   Check,
   X,
   Loader2,
   FolderPlus,
   Tag,
-  ImagePlus,
-  Upload,
-  User,
 } from 'lucide-react';
 import { createId } from '@paralleldrive/cuid2';
-import { AIStyle, PersonRole, SnapType, SNAP_TYPES, AlbumImage, AlbumGroup, AI_STYLES, ReferencePhoto, MAX_FILE_SIZE, ALLOWED_FILE_TYPES } from '@/types/ai';
+import { AIStyle, PersonRole, SnapType, SNAP_TYPES, AlbumImage, AlbumGroup, AI_STYLES, ReferencePhoto } from '@/types/ai';
 import { AlbumCuration } from './AlbumCuration';
 import { GenerationCard } from './GenerationCard';
 import { GenerationWizard, WizardConfig } from './GenerationWizard';
 import { BatchGenerationView } from './BatchGenerationView';
 import { GenerationFloatingBar } from './GenerationFloatingBar';
+import { ReferencePhotoSection } from './ReferencePhotoSection';
 import { CreditDisplay } from './CreditDisplay';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useConfirm } from '@/hooks/useConfirm';
@@ -70,7 +67,6 @@ export function AlbumDashboard({
   // ── State ──
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(album.name);
-  const [showGenerate, setShowGenerate] = useState(false);
   const [curatedImages, setCuratedImages] = useState<AlbumImage[]>(album.images ?? []);
   const [groups, setGroups] = useState<AlbumGroup[]>(album.groups ?? []);
   const [showLegacy, setShowLegacy] = useState(false);
@@ -90,11 +86,6 @@ export function AlbumDashboard({
   // 참조 사진
   const [referencePhotos, setReferencePhotos] = useState<ReferencePhoto[]>([]);
   const [refPhotosLoading, setRefPhotosLoading] = useState(true);
-  const [refUploading, setRefUploading] = useState<PersonRole | null>(null);
-  const [refUploadError, setRefUploadError] = useState<string | null>(null);
-  const [pendingFiles, setPendingFiles] = useState<Record<string, { file: File; preview: string }>>({});
-  const groomInputRef = useRef<HTMLInputElement>(null);
-  const brideInputRef = useRef<HTMLInputElement>(null);
 
   // 생성 wizard
   const [showWizard, setShowWizard] = useState(false);
@@ -109,6 +100,16 @@ export function AlbumDashboard({
     onCreditsChange,
     onComplete: onRefreshAlbum,
   });
+
+  // ── 생성 완료 시 자동 큐레이션 ──
+  // 생성 중 completedUrls를 추적하고, album 갱신 시 자동으로 큐레이션에 추가
+  const autoAddUrlsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (generation.state.isGenerating) {
+      generation.state.completedUrls.forEach((url) => autoAddUrlsRef.current.add(url));
+    }
+  }, [generation.state.completedUrls, generation.state.isGenerating]);
 
   // ── 참조 사진 로드 ──
   useEffect(() => {
@@ -129,85 +130,50 @@ export function AlbumDashboard({
     fetchRefPhotos();
   }, []);
 
-  // ── 참조 사진: 파일 선택 (프리뷰만) ──
-  const handleRefFileSelect = useCallback((file: File, role: PersonRole) => {
-    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-      setRefUploadError('JPG, PNG, WebP 파일만 업로드 가능합니다');
-      return;
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      setRefUploadError('파일 크기는 10MB 이하여야 합니다');
-      return;
-    }
-    setRefUploadError(null);
-    setPendingFiles((prev) => {
-      // 이전 preview URL revoke
-      if (prev[role]?.preview) URL.revokeObjectURL(prev[role].preview);
-      return { ...prev, [role]: { file, preview: URL.createObjectURL(file) } };
-    });
-  }, []);
-
-  // ── 참조 사진: 프리뷰 제거 ──
-  const handleRefFileRemove = useCallback((role: PersonRole) => {
-    setPendingFiles((prev) => {
-      if (prev[role]?.preview) URL.revokeObjectURL(prev[role].preview);
-      const next = { ...prev };
-      delete next[role];
-      return next;
-    });
-    const inputRef = role === 'GROOM' ? groomInputRef : brideInputRef;
-    if (inputRef.current) inputRef.current.value = '';
-  }, []);
-
-  // ── 참조 사진: 확인 후 실제 업로드 ──
-  const handleRefPhotoConfirmUpload = useCallback(async (role: PersonRole) => {
-    const pending = pendingFiles[role];
-    if (!pending) return;
-
-    const label = role === 'GROOM' ? '신랑' : '신부';
-    const confirmed = await confirm({
-      title: `${label} 참조 사진 업로드`,
-      description: '이 사진을 참조 사진으로 등록하시겠습니까?',
-      confirmText: '업로드',
-      cancelText: '취소',
-    });
-    if (!confirmed) return;
-
-    setRefUploading(role);
-    setRefUploadError(null);
-
-    try {
-      const formData = new FormData();
-      formData.append('image', pending.file);
-      formData.append('role', role);
-
-      const res = await fetch('/api/ai/reference-photos', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '업로드 실패');
-
-      setReferencePhotos((prev) => {
-        const filtered = prev.filter((p) => p.role !== role);
-        return [...filtered, data.data];
-      });
-      // pending 제거
-      handleRefFileRemove(role);
-    } catch (err) {
-      setRefUploadError(err instanceof Error ? err.message : '업로드 중 오류');
-    } finally {
-      setRefUploading(null);
-    }
-  }, [pendingFiles, confirm, handleRefFileRemove]);
-
   // Sync album data when album prop changes
   useEffect(() => {
-    setCuratedImages(album.images ?? []);
+    const albumImages = album.images ?? [];
+    const pendingUrls = autoAddUrlsRef.current;
+
+    if (pendingUrls.size > 0) {
+      // 생성 완료 후 album 갱신됨 — 새 사진 자동 큐레이션
+      const curatedUrlSet = new Set(albumImages.map((img) => img.url));
+      const newImages: AlbumImage[] = [];
+
+      for (const gen of album.generations) {
+        for (const url of gen.generatedUrls ?? []) {
+          if (pendingUrls.has(url) && !curatedUrlSet.has(url)) {
+            newImages.push({
+              url,
+              generationId: gen.id,
+              style: gen.style as AIStyle,
+              role: (gen.role ?? 'GROOM') as PersonRole,
+              sortOrder: albumImages.length + newImages.length,
+            });
+          }
+        }
+      }
+      pendingUrls.clear();
+
+      if (newImages.length > 0) {
+        const updated = [...albumImages, ...newImages];
+        setCuratedImages(updated);
+        setGroups(album.groups ?? []);
+        setNameInput(album.name);
+        // 서버에 저장
+        fetch(`/api/ai/albums/${album.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ images: updated }),
+        });
+        return;
+      }
+    }
+
+    setCuratedImages(albumImages);
     setGroups(album.groups ?? []);
     setNameInput(album.name);
-  }, [album.id, album.images, album.groups, album.name]);
+  }, [album.id, album.images, album.groups, album.name, album.generations]);
 
   // ── 앨범 이름 수정 ──
   const handleSaveName = async () => {
@@ -516,6 +482,72 @@ export function AlbumDashboard({
         )}
       </div>
 
+      {/* ── 참조 사진 + 촬영 설정 ── */}
+      <div className="space-y-4">
+        {refPhotosLoading ? (
+          <div className="flex items-center justify-center py-8 gap-2 text-stone-400">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="text-sm">참조 사진 확인 중...</span>
+          </div>
+        ) : (
+          <ReferencePhotoSection
+            referencePhotos={referencePhotos}
+            onPhotosChange={setReferencePhotos}
+            compact={hasRefPhotos}
+          />
+        )}
+
+        {hasRefPhotos && (() => {
+          const hasBatchView = (generation.state.isGenerating || generation.state.completedUrls.length > 0) && !isMinimized;
+
+          return (
+            <>
+              {hasBatchView && (
+                <BatchGenerationView
+                  totalImages={generation.state.totalImages}
+                  completedUrls={generation.state.completedUrls}
+                  currentIndex={generation.state.currentIndex}
+                  statusMessage={generation.state.statusMessage}
+                  error={generation.state.error}
+                  isGenerating={generation.state.isGenerating}
+                  onMinimize={() => setIsMinimized(true)}
+                  onCancel={generation.cancel}
+                  onDismiss={generation.reset}
+                />
+              )}
+
+              {!hasBatchView && (
+                !showWizard ? (
+                  <div className="flex flex-col items-center gap-3 rounded-xl border border-stone-200 bg-stone-50 py-8 px-6">
+                    <CreditDisplay balance={credits} />
+                    <p className="text-xs text-stone-500">
+                      참조 사진 {referencePhotos.length}장 등록됨 ({referencePhotos.map((p) => p.role === 'GROOM' ? '신랑' : '신부').join(', ')})
+                    </p>
+                    <button
+                      onClick={() => setShowWizard(true)}
+                      disabled={generation.state.isGenerating}
+                      className="flex items-center gap-2 rounded-lg bg-rose-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-rose-700 disabled:bg-stone-300"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      촬영 설정
+                    </button>
+                  </div>
+                ) : (
+                  <GenerationWizard
+                    credits={credits}
+                    referencePhotos={referencePhotos.map((p) => ({ id: p.id, role: p.role }))}
+                    snapType={snapType}
+                    onGenerate={handleWizardGenerate}
+                    onCancel={() => setShowWizard(false)}
+                    disabled={generation.state.isGenerating}
+                  />
+                )
+              )}
+            </>
+          );
+        })()}
+      </div>
+
       {/* ── 그룹 관리 ── */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
@@ -669,181 +701,12 @@ export function AlbumDashboard({
         </div>
       )}
 
-      {/* ── 추가 촬영 ── */}
-      <div className="space-y-4">
-        <button
-          onClick={() => setShowGenerate(!showGenerate)}
-          className="flex items-center gap-2 rounded-lg border border-dashed border-stone-300 px-4 py-3 text-sm font-medium text-stone-600 transition-colors hover:border-rose-300 hover:text-rose-600 w-full justify-center"
-        >
-          <Plus className="w-4 h-4" />
-          추가 촬영
-          {showGenerate ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-        </button>
-
-        {showGenerate && (
-          <div className="space-y-4">
-            {refPhotosLoading ? (
-              <div className="flex items-center justify-center py-8 gap-2 text-stone-400">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-sm">참조 사진 확인 중...</span>
-              </div>
-            ) : !hasRefPhotos ? (
-              /* 참조 사진 인라인 업로드 */
-              <div className="space-y-4 rounded-xl border border-stone-200 bg-stone-50 p-6">
-                <div className="text-center">
-                  <p className="text-sm font-medium text-stone-700">참조 사진을 먼저 업로드하세요</p>
-                  <p className="text-xs text-stone-500 mt-1">
-                    AI가 얼굴을 학습하려면 신랑/신부 참조 사진이 필요합니다 (최소 1명)
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  {(['GROOM', 'BRIDE'] as PersonRole[]).map((role) => {
-                    const existing = referencePhotos.find((p) => p.role === role);
-                    const pending = pendingFiles[role];
-                    const isUploading = refUploading === role;
-                    const label = role === 'GROOM' ? '신랑' : '신부';
-                    const inputRef = role === 'GROOM' ? groomInputRef : brideInputRef;
-                    const imageUrl = existing?.originalUrl ?? pending?.preview;
-
-                    return (
-                      <div key={role} className="space-y-2">
-                        <div className="flex items-center gap-1.5">
-                          <User className="w-3.5 h-3.5 text-stone-400" />
-                          <span className="text-xs font-medium text-stone-600">{label}</span>
-                          {existing && (
-                            <span className="ml-auto text-xs text-emerald-600 flex items-center gap-0.5">
-                              <Check className="w-3 h-3" />
-                              등록됨
-                            </span>
-                          )}
-                        </div>
-
-                        <div
-                          onClick={() => !isUploading && !imageUrl && inputRef.current?.click()}
-                          className={`
-                            relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed
-                            aspect-[3/4] overflow-hidden transition-colors
-                            ${imageUrl ? 'border-transparent' : 'border-stone-200 hover:border-rose-300 cursor-pointer bg-white'}
-                            ${isUploading ? 'pointer-events-none' : ''}
-                          `}
-                        >
-                          <input
-                            ref={inputRef}
-                            type="file"
-                            accept={ALLOWED_FILE_TYPES.join(',')}
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleRefFileSelect(file, role);
-                            }}
-                            className="hidden"
-                          />
-
-                          {isUploading && (
-                            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-white/80 backdrop-blur-sm">
-                              <Loader2 className="w-5 h-5 animate-spin text-rose-500" />
-                              <span className="text-xs text-stone-500">업로드 중...</span>
-                            </div>
-                          )}
-
-                          {imageUrl ? (
-                            <>
-                              <img src={imageUrl} alt={`${label} 참조`} className="h-full w-full object-cover rounded-xl" />
-                              {!existing && (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleRefFileRemove(role); }}
-                                  className="absolute top-2 right-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
-                                >
-                                  <X className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-                              <button
-                                onClick={(e) => { e.stopPropagation(); inputRef.current?.click(); }}
-                                className="absolute bottom-2 inset-x-2 z-10 rounded-lg bg-black/50 py-1.5 text-xs font-medium text-white hover:bg-black/70 transition-colors"
-                              >
-                                {existing ? '변경' : '다른 사진'}
-                              </button>
-                            </>
-                          ) : (
-                            <div className="flex flex-col items-center gap-2 p-4 text-center">
-                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-stone-100">
-                                <Camera className="w-5 h-5 text-stone-400" />
-                              </div>
-                              <p className="text-xs text-stone-500">탭하여 {label} 사진 선택</p>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* 업로드 버튼 (프리뷰만 있고 아직 서버에 안 올린 상태) */}
-                        {pending && !existing && (
-                          <button
-                            onClick={() => handleRefPhotoConfirmUpload(role)}
-                            disabled={isUploading}
-                            className="w-full flex items-center justify-center gap-1.5 rounded-lg bg-rose-600 py-2 text-xs font-medium text-white transition-colors hover:bg-rose-700 disabled:bg-stone-300"
-                          >
-                            <Upload className="w-3.5 h-3.5" />
-                            업로드하기
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {refUploadError && (
-                  <p className="text-xs text-red-500 text-center">{refUploadError}</p>
-                )}
-              </div>
-            ) : generation.state.isGenerating && !isMinimized ? (
-              /* 생성 진행 중 (확장 뷰) */
-              <BatchGenerationView
-                totalImages={generation.state.totalImages}
-                completedUrls={generation.state.completedUrls}
-                currentIndex={generation.state.currentIndex}
-                statusMessage={generation.state.statusMessage}
-                error={generation.state.error}
-                onMinimize={() => setIsMinimized(true)}
-              />
-            ) : !showWizard ? (
-              /* Wizard 시작 버튼 */
-              <div className="flex flex-col items-center gap-3 rounded-xl border border-stone-200 bg-stone-50 py-8 px-6">
-                <CreditDisplay balance={credits} />
-                <p className="text-xs text-stone-500">
-                  참조 사진 {referencePhotos.length}장 등록됨 ({referencePhotos.map((p) => p.role === 'GROOM' ? '신랑' : '신부').join(', ')})
-                </p>
-                <button
-                  onClick={() => setShowWizard(true)}
-                  disabled={generation.state.isGenerating}
-                  className="flex items-center gap-2 rounded-lg bg-rose-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-rose-700 disabled:bg-stone-300"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  촬영 설정
-                </button>
-              </div>
-            ) : (
-              /* Wizard */
-              <GenerationWizard
-                credits={credits}
-                referencePhotos={referencePhotos.map((p) => ({ id: p.id, role: p.role }))}
-                snapType={snapType}
-                onGenerate={handleWizardGenerate}
-                onCancel={() => setShowWizard(false)}
-                disabled={generation.state.isGenerating}
-              />
-            )}
-          </div>
-        )}
-      </div>
-
       {/* ── 생성 중 최소화 바 ── */}
       {generation.state.isGenerating && isMinimized && (
         <GenerationFloatingBar
           completedCount={generation.state.completedUrls.length}
           totalImages={generation.state.totalImages}
-          onExpand={() => {
-            setIsMinimized(false);
-            setShowGenerate(true);
-          }}
+          onExpand={() => setIsMinimized(false)}
         />
       )}
 

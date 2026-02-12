@@ -66,8 +66,8 @@ export function GenerationWizard({
   };
 
   const handleConfirm = () => {
-    if (config.mode && config.styles?.length && config.totalImages) {
-      onGenerate(config as WizardConfig);
+    if (config.mode && config.styles?.length && computedTotal > 0) {
+      onGenerate({ ...config, totalImages: computedTotal } as WizardConfig);
     }
   };
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2, Check, AlertCircle, Minimize2 } from 'lucide-react';
+import { Loader2, Check, AlertCircle, Minimize2, Square, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface BatchGenerationViewProps {
@@ -9,7 +9,10 @@ interface BatchGenerationViewProps {
   currentIndex: number;
   statusMessage: string;
   error: string | null;
+  isGenerating?: boolean;
   onMinimize?: () => void;
+  onCancel?: () => void;
+  onDismiss?: () => void;
 }
 
 export function BatchGenerationView({
@@ -18,10 +21,14 @@ export function BatchGenerationView({
   currentIndex,
   statusMessage,
   error,
+  isGenerating = true,
   onMinimize,
+  onCancel,
+  onDismiss,
 }: BatchGenerationViewProps) {
   const completedCount = completedUrls.length;
   const progress = totalImages > 0 ? (completedCount / totalImages) * 100 : 0;
+  const isComplete = !isGenerating && completedCount > 0;
 
   // Estimate remaining time: ~25s per image
   const remainingImages = totalImages - completedCount;
@@ -30,18 +37,38 @@ export function BatchGenerationView({
   const seconds = estimatedSeconds % 60;
 
   return (
-    <div className="space-y-4 rounded-xl border border-stone-200 bg-white p-5">
+    <div className={`space-y-4 rounded-xl border p-5 ${isComplete ? 'border-green-200 bg-green-50/30' : 'border-stone-200 bg-white'}`}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-stone-900">AI 촬영 중...</h3>
+          <h3 className="text-sm font-semibold text-stone-900">
+            {isComplete ? 'AI 촬영 완료' : 'AI 촬영 중...'}
+          </h3>
           <p className="text-xs text-stone-500 mt-0.5">{statusMessage}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-stone-600">
             {completedCount}/{totalImages}장
           </span>
-          {onMinimize && (
+          {isGenerating && onCancel && (
+            <button
+              onClick={onCancel}
+              className="flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
+            >
+              <Square className="w-3 h-3" />
+              중지
+            </button>
+          )}
+          {isComplete && onDismiss && (
+            <button
+              onClick={onDismiss}
+              className="flex items-center gap-1 rounded-lg border border-stone-200 px-2.5 py-1.5 text-xs font-medium text-stone-600 hover:bg-stone-100 transition-colors"
+            >
+              <X className="w-3 h-3" />
+              닫기
+            </button>
+          )}
+          {isGenerating && onMinimize && (
             <button
               onClick={onMinimize}
               className="rounded-lg border border-stone-200 p-1.5 text-stone-400 hover:text-stone-600 transition-colors"

@@ -27,8 +27,6 @@ const AIStyleSchema = z.enum([
   'MINIMALIST_GALLERY',
 ]);
 
-const IS_DEV = process.env.NODE_ENV === 'development';
-
 /**
  * SSE 스트리밍 AI 생성 API
  * 이미지가 1장씩 생성될 때마다 클라이언트로 전송
@@ -44,8 +42,12 @@ export async function POST(request: NextRequest) {
   const writer = stream.writable.getWriter();
 
   const sendEvent = async (type: string, data: any) => {
-    const message = `data: ${JSON.stringify({ type, ...data })}\n\n`;
-    await writer.write(encoder.encode(message));
+    try {
+      const message = `data: ${JSON.stringify({ type, ...data })}\n\n`;
+      await writer.write(encoder.encode(message));
+    } catch {
+      // 클라이언트 연결 끊김 — 무시
+    }
   };
 
   // 비동기로 생성 처리
@@ -174,7 +176,7 @@ export async function POST(request: NextRequest) {
         // 9. S3 업로드
         await sendEvent('status', { message: '이미지 준비 중...' });
         try {
-          const s3UploadResult = await uploadToS3(buffer, uploadedImage.type, 'ai-originals');
+          const s3UploadResult = await uploadToS3(buffer, uploadedImage.type, `ai-originals/${user.id}`);
           originalUrl = s3UploadResult.url;
         } catch (error) {
           if (creditsDeducted) {
@@ -188,13 +190,11 @@ export async function POST(request: NextRequest) {
 
       // 6. 크레딧 확인 & 차감 (jobId가 없을 때만 — Job은 이미 예약됨)
       if (!jobId) {
-        if (!IS_DEV) {
-          const { hasCredits, balance } = checkCreditsFromUser(user);
-          if (!hasCredits) {
-            await sendEvent('error', { error: 'Insufficient credits', balance });
-            await writer.close();
-            return;
-          }
+        const { hasCredits, balance } = checkCreditsFromUser(user);
+        if (!hasCredits) {
+          await sendEvent('error', { error: 'Insufficient credits', balance });
+          await writer.close();
+          return;
         }
 
         // 8. 크레딧 차감
@@ -281,7 +281,7 @@ export async function POST(request: NextRequest) {
         }
 
         // 12. 완료
-        const remainingCredits = IS_DEV ? 999 : (
+        const remainingCredits = (
           await db.query.users.findFirst({
             where: eq(users.id, user.id),
             columns: { aiCredits: true },
@@ -311,24 +311,33 @@ export async function POST(request: NextRequest) {
           }).where(eq(aiGenerationJobs.id, jobId));
         }
 
-        await db.insert(aiGenerations).values({
-          userId: user.id,
-          originalUrl: originalUrl!,
-          style: styleData,
-          role: role as 'GROOM' | 'BRIDE',
-          modelId: selectedModel?.id ?? modelId ?? null,
-          albumId: albumId || null,
-          jobId: jobId || null,
-          status: 'FAILED',
-          creditsUsed: 0,
-          cost: 0,
-        });
-
         logger.error('AI generation failed', {
           userId,
           style,
           error: error instanceof Error ? error.message : String(error),
         });
+
+        try {
+          await db.insert(aiGenerations).values({
+            userId: user.id,
+            originalUrl: originalUrl!,
+            style: styleData,
+            role: role as 'GROOM' | 'BRIDE',
+            modelId: selectedModel?.id ?? modelId ?? null,
+            albumId: albumId || null,
+            jobId: jobId || null,
+            status: 'FAILED',
+            creditsUsed: 0,
+            cost: 0,
+          });
+        } catch (dbErr: any) {
+          logger.error('Failed to save FAILED generation record', {
+            error: dbErr?.message ?? String(dbErr),
+            cause: dbErr?.cause?.message ?? dbErr?.cause ?? undefined,
+            code: dbErr?.code ?? undefined,
+            detail: dbErr?.detail ?? undefined,
+          });
+        }
 
         await sendEvent('error', {
           error: error instanceof Error ? error.message : 'AI 생성 실패'
@@ -344,7 +353,11 @@ export async function POST(request: NextRequest) {
 
       await sendEvent('error', { error: '서버 오류가 발생했습니다' });
     } finally {
-      await writer.close();
+      try {
+        await writer.close();
+      } catch {
+        // 이미 닫힌 상태 — 무시
+      }
     }
   })();
 
