@@ -365,7 +365,7 @@ export const aiGenerationJobs = pgTable('ai_generation_jobs', {
 export const aiCreditTransactions = pgTable('ai_credit_transactions', {
   id: varchar('id', { length: 128 }).primaryKey().$defaultFn(() => createId()),
   userId: varchar('user_id', { length: 128 }).notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
+    .references(() => users.id, { onDelete: 'restrict' }),
   type: aiCreditTxTypeEnum('type').notNull(),
   amount: integer('amount').notNull(), // 항상 양수, type으로 방향 구분
   balanceAfter: integer('balance_after').notNull(),
@@ -386,7 +386,7 @@ export const payments = pgTable(
       .$defaultFn(() => createId()),
     userId: varchar('user_id', { length: 128 })
       .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
+      .references(() => users.id, { onDelete: 'restrict' }),
 
     type: paymentTypeEnum('type').notNull(),
     method: paymentMethodEnum('method').notNull(),
