@@ -274,6 +274,8 @@ function resolveCeremonyLayout(theme: SerializableTheme): 'cards' | 'centered' |
 
 export function CeremonySection({ data, theme }: CeremonySectionProps) {
   const weddingDate = new Date(data.wedding.date);
+  if (!data.wedding.date || isNaN(weddingDate.getTime())) return null;
+
   const fullDateStr = formatWeddingDateTime(weddingDate);
   const calendarStyle = (data.settings?.calendarStyle as string) ?? 'calendar';
   const layout = resolveCeremonyLayout(theme);

@@ -43,7 +43,7 @@ export function InvitationView({ data, isPremium: isPremiumProp = false }: Invit
         invitationId={data.id}
         groomName={data.groom.name}
         brideName={data.bride.name}
-        imageUrl={data.gallery.images[0] || data.aiPhotoUrl}
+        imageUrl={data.gallery.images[0] || data.aiPhotoUrl || undefined}
         description={data.content.greeting?.slice(0, 100)}
       />
     </main>
