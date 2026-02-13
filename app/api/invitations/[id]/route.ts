@@ -4,6 +4,7 @@ import { db } from '@/db';
 import { invitations } from '@/db/schema';
 import { UpdateInvitationSchema, ExtendedDataSchema } from '@/schemas/invitation';
 import { dbRecordToInvitation, invitationToDbUpdate } from '@/lib/invitation-utils';
+import { invalidateInvitationCache } from '@/lib/invitation-cache';
 import { eq } from 'drizzle-orm';
 
 // GET /api/invitations/[id] - 단건 조회 (권한 체크)
@@ -180,6 +181,9 @@ export async function PUT(
       .where(eq(invitations.id, id))
       .returning();
 
+    // 공개 페이지 캐시 무효화
+    invalidateInvitationCache(id);
+
     return NextResponse.json({
       success: true,
       data: {
@@ -239,6 +243,9 @@ export async function DELETE(
         updatedAt: new Date(),
       })
       .where(eq(invitations.id, id));
+
+    // 공개 페이지 캐시 무효화
+    invalidateInvitationCache(id);
 
     return NextResponse.json({
       success: true,

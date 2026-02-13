@@ -10,8 +10,12 @@
 - **Backend**: Next.js API Routes, NextAuth.js v5 (카카오 로그인)
 - **DB**: PostgreSQL (Supabase) + Drizzle ORM
 - **Storage**: AWS S3 + CloudFront
-- **AI**: Replicate API (Flux Pro/Dev, PhotoMaker)
-- **Cache**: Upstash Redis
+- **AI**: 멀티 프로바이더 — Replicate (Flux Pro/Dev, PhotoMaker), OpenAI (GPT Image, DALL-E 3), Google Gemini (Flash/Pro), Anthropic Claude (테마 생성)
+- **Face Detection**: Azure Face API
+- **Cache/Rate Limit**: Upstash Redis
+- **Testing**: Vitest
+- **Form**: react-hook-form + @hookform/resolvers
+- **DnD**: @dnd-kit (앨범 큐레이션)
 
 ## 기본 원칙
 
@@ -43,28 +47,73 @@
 - 타입 안전성 확보
 
 ### 프론트엔드
-- Zod 스키마 필수 (런타임 검증) - `schemas/` 폴더
-- 타입 정의 - `types/` 폴더
+- Zod 스키마 필수 (런타임 검증) — `schemas/` 폴더 (9개 파일: common, invitation, rsvp, user, payment, ai, theme, admin, index)
+- 타입 정의 — `types/` 폴더
+- 커스텀 훅 — `hooks/` 폴더
+- Zustand 스토어 — `stores/` 폴더
 - 불필요한 리렌더링 주의
 
 ### 백엔드
 - API 응답 형식 일관성
 - 에러 핸들링 명확
 - 민감 정보 로깅 금지
+- Rate limiting — Upstash Redis + Lua 스크립트 (`lib/rate-limit.ts`)
 
 ## 핵심 파일
 
-- `db/schema.ts` - Drizzle 스키마 (User, Invitation, RSVP, AIGeneration, Payment 등)
-- `lib/ai/replicate.ts` - AI 사진 생성 로직
-- `lib/ai/models.ts` - AI 모델 정의 (Flux Pro/Dev, PhotoMaker)
-- `app/api/ai/generate/route.ts` - AI 생성 API
-- `components/editor/` - 탭 기반 폼 편집기 (EditorPanel, PreviewPanel, tabs/)
+### DB & 스키마
+- `db/schema.ts` — Drizzle 스키마 (17개 테이블: users, templates, invitations, rsvps, aiGenerations, aiAlbums, aiReferencePhotos, aiGenerationJobs, aiCreditTransactions, payments, aiModelSettings, appSettings, aiThemes + NextAuth 테이블)
+
+### AI 시스템
+- `lib/ai/models.ts` — AI 모델 정의 (7개 모델)
+- `lib/ai/providers/` — 프로바이더 추상화 (replicate, openai, gemini)
+- `lib/ai/generate.ts` — 코어 생성 로직
+- `lib/ai/credits.ts` — 크레딧 관리
+- `lib/ai/face-detection.ts` — Azure 얼굴 감지
+- `lib/ai/theme-generation.ts` — AI 테마 생성 (Anthropic/OpenAI/Gemini)
+- `lib/ai/theme-providers/` — 테마 프로바이더 (anthropic, openai, gemini)
+- `lib/ai/prompts.ts`, `lib/ai/constants.ts`, `lib/ai/validation.ts`
+
+### 캐싱 & 인프라
+- `lib/invitation-cache.ts` — Redis 캐싱 (5분 TTL, 조회수 lazy flush)
+- `lib/rate-limit.ts` — 범용 Rate limiter
+
+### 에디터 & 템플릿
+- `components/editor/` — 탭 기반 폼 편집기 (9개 탭: BasicInfo, Greeting, Venue, Gallery, Account, Rsvp, Template, Settings + AI 연동)
+- `components/templates/` — 6개 템플릿 (Classic, Modern, Elegant, Floral, Minimal, Natural) + BaseTemplate
+- `lib/templates/` — 템플릿 시스템 (types, themes, resolvers, safelist)
+
+## 주요 API Routes (39개)
+
+- **AI** (17): generate(+stream), generations, albums, jobs, reference-photos, credits, models, theme, select
+- **Admin** (7): stats, users, payments, ai-generations, ai-themes, ai-models, settings
+- **Invitations** (5): CRUD, RSVP, verify
+- **User** (3): profile, settings, credits
+- **기타**: dashboard/stats, payments/history, upload/gallery, search-address, cron/cleanup
 
 ## 구현 현황
 
-**완료**: 인증, 청첩장 CRUD, 폼 편집기, AI 사진 생성, 갤러리, 계좌 관리, 대시보드, 클래식 템플릿
+**완료**:
+- 인증 (카카오 로그인, NextAuth v5)
+- 청첩장 CRUD + 폼 편집기 (9개 탭)
+- 6개 템플릿 (Classic/Modern/Elegant/Floral/Minimal/Natural)
+- AI 사진 생성 — 멀티 프로바이더 (Replicate, OpenAI, Gemini), 15개 스타일
+- AI 앨범 시스템 v2 (앨범 기반 관리, 배치 생성, 참조 사진 라이브러리)
+- AI 크레딧 시스템 (트랜잭션 감사 추적, DEDUCT/REFUND/PURCHASE/BONUS)
+- AI 테마 생성 (Claude/GPT/Gemini로 템플릿 테마 자동 생성)
+- 갤러리 + 계좌 관리
+- 대시보드 + 통계
+- 공개 청첩장 뷰 (`inv/[id]/`) + Redis 캐싱 (5분 TTL)
+- RSVP 하객 폼
+- 카카오톡 공유 + 카카오 주소 검색
+- 어드민 패널 (유저 관리, 결제 내역, AI 생성 이력, 모델 설정, 앱 설정)
+- A/B/C 랜딩 페이지
+- Rate limiting (Upstash Redis)
+- 얼굴 감지 (Azure Face API)
+- 모바일 에디터 (`/m/editor`)
 
-**미구현**: 공개 청첩장 뷰 (`inv/[id]/`), Toss 결제, RSVP 게스트 폼, 추가 템플릿, 카카오톡 공유
+**미구현/부분 구현**:
+- Toss 결제 — 스키마/타입 정의됨, 결제 내역 API 있음, 실제 체크아웃/웹훅 미구현
 
 ## Next.js 16 주의사항
 

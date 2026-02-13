@@ -1,11 +1,13 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { db } from '@/db';
-import { invitations } from '@/db/schema';
-import { eq, sql } from 'drizzle-orm';
 import { auth } from '@/auth';
 import { cookies } from 'next/headers';
 import { dbRecordToInvitation } from '@/lib/invitation-utils';
+import {
+  getInvitationCached,
+  getInvitationMetaCached,
+  incrementViewCount,
+} from '@/lib/invitation-cache';
 import { InvitationView } from './InvitationView';
 import { PasswordGate } from './PasswordGate';
 
@@ -20,9 +22,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
 
-  const invitation = await db.query.invitations.findFirst({
-    where: eq(invitations.id, id),
-  });
+  const invitation = await getInvitationMetaCached(id);
 
   if (!invitation || invitation.status === 'DELETED') {
     return { title: '청첩장을 찾을 수 없습니다 | Cuggu' };
@@ -62,11 +62,8 @@ export default async function InvitationPublicPage({
 }) {
   const { id } = await params;
 
-  // DB에서 청첩장 조회
-  const invitation = await db.query.invitations.findFirst({
-    where: eq(invitations.id, id),
-    with: { template: true, user: { columns: { premiumPlan: true } } },
-  });
+  // 청첩장 조회 (Redis 캐시 → DB fallback)
+  const invitation = await getInvitationCached(id);
 
   // 존재하지 않거나 삭제됨
   if (!invitation || invitation.status === 'DELETED') {
@@ -99,13 +96,9 @@ export default async function InvitationPublicPage({
     }
   }
 
-  // 조회수 증가 (PUBLISHED만, fire-and-forget)
+  // 조회수 증가 (PUBLISHED만, Redis 배치 → lazy DB flush)
   if (invitation.status === 'PUBLISHED') {
-    db.update(invitations)
-      .set({ viewCount: sql`${invitations.viewCount} + 1` })
-      .where(eq(invitations.id, id))
-      .then(() => {})
-      .catch(() => {});
+    incrementViewCount(id);
   }
 
   // DB row → Invitation 타입 변환
