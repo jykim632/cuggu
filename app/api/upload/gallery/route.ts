@@ -164,19 +164,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 8. DB 업데이트 (기존 이미지에 추가)
-    const updatedImages = [
-      ...(invitation.galleryImages ?? []),
-      ...uploadedUrls,
-    ];
+    // 8. DB 업데이트 — Transaction으로 read-modify-write 원자성 보장
+    const { totalCount } = await db.transaction(async (tx) => {
+      const current = await tx.query.invitations.findFirst({
+        where: eq(invitations.id, invitationId),
+        columns: { galleryImages: true },
+      });
 
-    await db
-      .update(invitations)
-      .set({
-        galleryImages: updatedImages,
-        updatedAt: new Date(),
-      })
-      .where(eq(invitations.id, invitationId));
+      const updatedImages = [
+        ...(current?.galleryImages ?? []),
+        ...uploadedUrls,
+      ];
+
+      await tx
+        .update(invitations)
+        .set({
+          galleryImages: updatedImages,
+          updatedAt: new Date(),
+        })
+        .where(eq(invitations.id, invitationId));
+
+      return { totalCount: updatedImages.length };
+    });
 
     // 9. 응답
     return NextResponse.json({
@@ -184,7 +193,7 @@ export async function POST(request: NextRequest) {
       data: {
         urls: uploadedUrls,
         count: uploadedUrls.length,
-        total: updatedImages.length,
+        total: totalCount,
         limit,
         errors: errors.length > 0 ? errors : undefined,
       },

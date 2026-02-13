@@ -41,43 +41,51 @@ export async function POST(request: NextRequest) {
 
     const { invitationId, imageUrls } = parsed.data;
 
-    // 청첩장 조회 (본인 소유 확인)
-    const invitation = await db.query.invitations.findFirst({
-      where: and(
-        eq(invitations.id, invitationId),
-        eq(invitations.userId, user.id)
-      ),
-      columns: {
-        id: true,
-        galleryImages: true,
-        groomName: true,
-        brideName: true,
-      },
+    // Transaction으로 read-modify-write 원자성 보장
+    const result = await db.transaction(async (tx) => {
+      const inv = await tx.query.invitations.findFirst({
+        where: and(
+          eq(invitations.id, invitationId),
+          eq(invitations.userId, user.id)
+        ),
+        columns: {
+          id: true,
+          galleryImages: true,
+          groomName: true,
+          brideName: true,
+        },
+      });
+
+      if (!inv) return null;
+
+      const existing = new Set(inv.galleryImages ?? []);
+      const newImages = imageUrls.filter((url) => !existing.has(url));
+      if (newImages.length === 0) {
+        return { addedCount: 0, totalCount: existing.size, inv };
+      }
+
+      const updatedImages = [...(inv.galleryImages ?? []), ...newImages];
+      await tx
+        .update(invitations)
+        .set({
+          galleryImages: updatedImages,
+          updatedAt: new Date(),
+        })
+        .where(eq(invitations.id, invitationId));
+
+      return { addedCount: newImages.length, totalCount: updatedImages.length, inv };
     });
 
-    if (!invitation) {
+    if (!result) {
       return NextResponse.json({ error: '청첩장을 찾을 수 없습니다' }, { status: 404 });
     }
-
-    // 기존 갤러리에 append (중복 제거)
-    const existingImages = invitation.galleryImages ?? [];
-    const newImages = imageUrls.filter((url) => !existingImages.includes(url));
-    const updatedImages = [...existingImages, ...newImages];
-
-    await db
-      .update(invitations)
-      .set({
-        galleryImages: updatedImages,
-        updatedAt: new Date(),
-      })
-      .where(eq(invitations.id, invitationId));
 
     return NextResponse.json({
       success: true,
       data: {
-        addedCount: newImages.length,
-        totalCount: updatedImages.length,
-        invitationName: `${invitation.groomName} ♥ ${invitation.brideName}`,
+        addedCount: result.addedCount,
+        totalCount: result.totalCount,
+        invitationName: `${result.inv.groomName} ♥ ${result.inv.brideName}`,
       },
     });
   } catch (error) {

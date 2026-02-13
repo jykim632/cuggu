@@ -47,24 +47,6 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     const { invitationId } = parsed.data;
 
-    // 청첩장 소유권 확인
-    const invitation = await db.query.invitations.findFirst({
-      where: and(
-        eq(invitations.id, invitationId),
-        eq(invitations.userId, user.id)
-      ),
-      columns: {
-        id: true,
-        galleryImages: true,
-        groomName: true,
-        brideName: true,
-      },
-    });
-
-    if (!invitation) {
-      return NextResponse.json({ error: '청첩장을 찾을 수 없습니다' }, { status: 404 });
-    }
-
     // 앨범 images에서 URL 추출
     const albumImages = (album.images ?? []) as Array<{ url: string }>;
     const imageUrls = albumImages.map((img) => img.url);
@@ -73,29 +55,56 @@ export async function POST(request: NextRequest, { params }: Params) {
       return NextResponse.json({ error: '앨범에 선택된 이미지가 없습니다' }, { status: 400 });
     }
 
-    // 기존 갤러리에 append (중복 제거)
-    const existingImages = invitation.galleryImages ?? [];
-    const newImages = imageUrls.filter((url) => !existingImages.includes(url));
-    const updatedImages = [...existingImages, ...newImages];
+    // Transaction으로 갤러리 업데이트 + 앨범 상태 변경 원자성 보장
+    const result = await db.transaction(async (tx) => {
+      const inv = await tx.query.invitations.findFirst({
+        where: and(
+          eq(invitations.id, invitationId),
+          eq(invitations.userId, user.id)
+        ),
+        columns: {
+          id: true,
+          galleryImages: true,
+          groomName: true,
+          brideName: true,
+        },
+      });
 
-    // 청첩장 갤러리 업데이트 + 앨범 상태 변경
-    await db.update(invitations).set({
-      galleryImages: updatedImages,
-      updatedAt: new Date(),
-    }).where(eq(invitations.id, invitationId));
+      if (!inv) return null;
 
-    await db.update(aiAlbums).set({
-      status: 'applied',
-      invitationId,
-      updatedAt: new Date(),
-    }).where(eq(aiAlbums.id, id));
+      const existing = new Set(inv.galleryImages ?? []);
+      const newImages = imageUrls.filter((url) => !existing.has(url));
+
+      const updatedImages = newImages.length > 0
+        ? [...(inv.galleryImages ?? []), ...newImages]
+        : (inv.galleryImages ?? []);
+
+      if (newImages.length > 0) {
+        await tx.update(invitations).set({
+          galleryImages: updatedImages,
+          updatedAt: new Date(),
+        }).where(eq(invitations.id, invitationId));
+      }
+
+      await tx.update(aiAlbums).set({
+        status: 'applied',
+        invitationId,
+        updatedAt: new Date(),
+      }).where(eq(aiAlbums.id, id));
+
+      return { addedCount: newImages.length, totalCount: updatedImages.length, inv };
+    });
+
+    if (!result) {
+      return NextResponse.json({ error: '청첩장을 찾을 수 없습니다' }, { status: 404 });
+    }
 
     return NextResponse.json({
       success: true,
       data: {
-        addedCount: newImages.length,
-        totalCount: updatedImages.length,
-        invitationName: `${invitation.groomName} ♥ ${invitation.brideName}`,
+        addedCount: result.addedCount,
+        totalCount: result.totalCount,
+        invitationName: `${result.inv.groomName} ♥ ${result.inv.brideName}`,
       },
     });
   } catch (error) {
