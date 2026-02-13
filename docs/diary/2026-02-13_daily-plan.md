@@ -28,12 +28,23 @@
 
 어제 daily review + 오늘 DB 리뷰에서 공통 지적된 핵심 이슈.
 
-| # | 작업 | 참조 | 예상 |
+| # | 작업 | 참조 | 상태 |
 |---|------|------|------|
-| 1-1 | **크레딧 감사 추적 완성** — `deductCredits()`/`refundCredits()`에 `ai_credit_transactions` 기록 추가 | DB 리뷰 Critical #1 | 1시간 |
-| 1-2 | **AIStyle enum 3곳 동기화** — `schemas/ai.ts` 스키마를 DB enum 기준 15개로 통일 | DB 리뷰 Critical #4 | 15분 |
-| 1-3 | **CASCADE → RESTRICT** — `payments`, `ai_credit_transactions` FK를 restrict로 변경 | DB 리뷰 Critical #2 | 30분 |
-| 1-4 | **Apply 경쟁 조건 수정** — 트랜잭션 추가 또는 atomic append | 2/12 daily review P0 | 30분 |
+| 1-1 | **크레딧 감사 추적 완성** — `deductCredits()`/`refundCredits()`에 `ai_credit_transactions` 기록 추가 | DB 리뷰 Critical #1 | **완료** |
+| 1-1b | **크레딧 감사 추적 UI** — 어드민 `/admin/credit-audit` + 사용자 설정 페이지 이력 | 1-1 후속 | **완료** |
+| 1-2 | **AIStyle enum 3곳 동기화** — `schemas/ai.ts` 스키마를 DB enum 기준 15개로 통일 | DB 리뷰 Critical #4 | 미착수 |
+| 1-3 | **CASCADE → RESTRICT** — `payments`, `ai_credit_transactions` FK를 restrict로 변경 | DB 리뷰 Critical #2 | 미착수 |
+| 1-4 | **Apply 경쟁 조건 수정** — 트랜잭션 추가 또는 atomic append | 2/12 daily review P0 | 미착수 |
+
+**1-1 완료 상세:**
+- 백엔드: `deductCredits`/`refundCredits`/`reserveCredits`/`releaseCredits` → `ai_credit_transactions` INSERT (트랜잭션 내)
+- 어드민 API: `GET /api/admin/credit-transactions` (타입/유저 필터 + 통계 + 페이지네이션)
+- 사용자 API: `GET /api/ai/credits` 페이지네이션 지원 추가
+- 공유 컴포넌트: `CreditTxBadge`, `CreditTxAmount`, `CreditTxList` (악센트 바, 복사 버튼, 페이지네이션)
+- 어드민 페이지: `/admin/credit-audit` (통계 3종 + 필터 + 카드 리스트)
+- 사용자 설정: 크레딧 이력 섹션 추가
+- description 사용자 친화적으로 개선 (예약→배치 생성 등)
+- 발견된 버그: 배치 Job 자연 완료 시 미사용 크레딧 자동 환불 누락 → `cuggu-9c0` 이슈 등록
 
 ### 2단계: 공개 청첩장 뷰 완성 (오후)
 
