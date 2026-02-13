@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { db } from '@/db';
 import { users, aiThemes, invitations } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
+import { createId } from '@paralleldrive/cuid2';
 import { checkCreditsFromUser, deductCredits, refundCredits } from '@/lib/ai/credits';
 import { generateTheme } from '@/lib/ai/theme-generation';
 import { DEFAULT_THEME_CONFIG, findThemeModelById } from '@/lib/ai/theme-models';
@@ -109,8 +110,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 7. 크레딧 차감
-    await deductCredits(user.id, 1);
+    // 7. 크레딧 차감 (감사 추적 포함)
+    const themeId = createId();
+    const creditBalance = await deductCredits(user.id, 1, {
+      referenceType: 'THEME',
+      referenceId: themeId,
+      description: 'AI 테마 생성',
+    });
 
     // 7.5. 청첩장 컨텍스트 추출 (invitationId가 있을 때만)
     let themeContext: ThemeContextResult | null = null;
@@ -150,10 +156,15 @@ export async function POST(request: NextRequest) {
       });
     } catch (error) {
       // 생성 실패 — 크레딧 환불 + DB에 실패 기록 (API 비용은 이미 발생)
-      await refundCredits(user.id, 1);
+      await refundCredits(user.id, 1, {
+        referenceType: 'THEME',
+        referenceId: themeId,
+        description: 'AI 테마 생성 실패 환불',
+      });
 
       const failMessage = error instanceof Error ? error.message : String(error);
       await db.insert(aiThemes).values({
+        id: themeId,
         userId: user.id,
         invitationId: parsed.data.invitationId || null,
         prompt: parsed.data.prompt,
@@ -172,6 +183,7 @@ export async function POST(request: NextRequest) {
     const themeStatus = safelistResult.valid ? 'completed' as const : 'safelist_failed' as const;
 
     const [inserted] = await db.insert(aiThemes).values({
+      id: themeId,
       userId: user.id,
       invitationId: parsed.data.invitationId || null,
       prompt: parsed.data.prompt,
@@ -185,15 +197,8 @@ export async function POST(request: NextRequest) {
       cost: result.cost,
     }).returning({ id: aiThemes.id });
 
-    // 10. 잔여 크레딧
-    let remainingCredits = 999;
-    if (!isDev) {
-      const updatedUser = await db.query.users.findFirst({
-        where: eq(users.id, user.id),
-        columns: { aiCredits: true },
-      });
-      remainingCredits = updatedUser?.aiCredits ?? 0;
-    }
+    // 10. 잔여 크레딧 (deductCredits 반환값 사용)
+    const remainingCredits = isDev ? 999 : creditBalance;
 
     return NextResponse.json({
       success: true,

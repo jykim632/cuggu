@@ -6,7 +6,13 @@ import {
   refundCredits,
 } from '@/lib/ai/credits';
 
-// Mock DB
+// Mock DB — transaction + insert 추가
+const mockReturning = vi.fn();
+const mockWhere = vi.fn(() => ({ returning: mockReturning }));
+const mockSet = vi.fn(() => ({ where: mockWhere }));
+const mockInsertValues = vi.fn();
+const mockTransaction = vi.fn();
+
 vi.mock('@/db', () => ({
   db: {
     query: {
@@ -21,6 +27,7 @@ vi.mock('@/db', () => ({
         })),
       })),
     })),
+    transaction: vi.fn(),
   },
 }));
 
@@ -97,137 +104,243 @@ describe('Credits System', () => {
   });
 
   describe('deductCredits', () => {
-    it('성공: 크레딧 1개 차감', async () => {
-      vi.mocked(db.update).mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([{ aiCredits: 4 }]),
-          }),
-        }),
-      } as any);
+    it('성공: 크레딧 차감 + 감사 추적 기록', async () => {
+      const mockInsert = vi.fn(() => ({ values: vi.fn() }));
+      const mockTx = {
+        update: vi.fn(() => ({
+          set: vi.fn(() => ({
+            where: vi.fn(() => ({
+              returning: vi.fn().mockResolvedValue([{ aiCredits: 4 }]),
+            })),
+          })),
+        })),
+        insert: mockInsert,
+      };
 
-      await expect(deductCredits(mockUserId, 1)).resolves.toBeUndefined();
+      vi.mocked(db.transaction).mockImplementation(async (fn: any) => fn(mockTx));
 
-      expect(db.update).toHaveBeenCalled();
+      const result = await deductCredits(mockUserId, 1, {
+        referenceType: 'GENERATION',
+        referenceId: 'gen-123',
+        description: 'AI 사진 생성',
+      });
+
+      expect(result).toBe(4);
+      expect(db.transaction).toHaveBeenCalled();
+      expect(mockTx.update).toHaveBeenCalled();
+      expect(mockTx.insert).toHaveBeenCalled();
     });
 
-    it('성공: 크레딧 여러 개 차감', async () => {
-      vi.mocked(db.update).mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([{ aiCredits: 2 }]),
-          }),
-        }),
-      } as any);
+    it('성공: options 없이 기본 description 사용', async () => {
+      const insertValues = vi.fn();
+      const mockTx = {
+        update: vi.fn(() => ({
+          set: vi.fn(() => ({
+            where: vi.fn(() => ({
+              returning: vi.fn().mockResolvedValue([{ aiCredits: 9 }]),
+            })),
+          })),
+        })),
+        insert: vi.fn(() => ({ values: insertValues })),
+      };
 
-      await expect(deductCredits(mockUserId, 3)).resolves.toBeUndefined();
+      vi.mocked(db.transaction).mockImplementation(async (fn: any) => fn(mockTx));
+
+      const result = await deductCredits(mockUserId, 1);
+
+      expect(result).toBe(9);
+      expect(insertValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'DEDUCT',
+          amount: 1,
+          balanceAfter: 9,
+          referenceType: null,
+          referenceId: null,
+          description: '크레딧 차감 (1장)',
+        })
+      );
     });
 
     it('실패: 크레딧 부족 (Race condition 방지)', async () => {
-      // WHERE 조건으로 인해 UPDATE가 0개 행 반환
-      vi.mocked(db.update).mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([]), // 빈 배열
-          }),
-        }),
-      } as any);
+      const mockTx = {
+        update: vi.fn(() => ({
+          set: vi.fn(() => ({
+            where: vi.fn(() => ({
+              returning: vi.fn().mockResolvedValue([]), // 빈 배열
+            })),
+          })),
+        })),
+        insert: vi.fn(() => ({ values: vi.fn() })),
+      };
+
+      vi.mocked(db.transaction).mockImplementation(async (fn: any) => fn(mockTx));
 
       await expect(deductCredits(mockUserId, 1)).rejects.toThrow(
         'Insufficient credits'
       );
+      // 실패 시 insert 호출 없어야 함
+      expect(mockTx.insert).not.toHaveBeenCalled();
     });
 
-    it('실패: 동시 요청 시 Race condition 방지', async () => {
-      // 첫 번째 요청: 성공 (5 -> 4)
-      vi.mocked(db.update).mockReturnValueOnce({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([{ aiCredits: 4 }]),
-          }),
-        }),
-      } as any);
+    it('반환값: balanceAfter 숫자 반환', async () => {
+      const mockTx = {
+        update: vi.fn(() => ({
+          set: vi.fn(() => ({
+            where: vi.fn(() => ({
+              returning: vi.fn().mockResolvedValue([{ aiCredits: 2 }]),
+            })),
+          })),
+        })),
+        insert: vi.fn(() => ({ values: vi.fn() })),
+      };
 
-      // 두 번째 요청: 실패 (WHERE 조건 불만족)
-      vi.mocked(db.update).mockReturnValueOnce({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      } as any);
+      vi.mocked(db.transaction).mockImplementation(async (fn: any) => fn(mockTx));
 
-      // 첫 번째 요청 성공
-      await expect(deductCredits(mockUserId, 1)).resolves.toBeUndefined();
-
-      // 두 번째 동시 요청 실패 (크레딧 부족)
-      await expect(deductCredits(mockUserId, 5)).rejects.toThrow(
-        'Insufficient credits'
-      );
+      const result = await deductCredits(mockUserId, 3);
+      expect(typeof result).toBe('number');
+      expect(result).toBe(2);
     });
   });
 
   describe('refundCredits', () => {
-    it('성공: 크레딧 1개 환불', async () => {
-      vi.mocked(db.update).mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(undefined),
-        }),
-      } as any);
+    it('성공: 크레딧 환불 + 감사 추적 기록', async () => {
+      const insertValues = vi.fn();
+      const mockTx = {
+        update: vi.fn(() => ({
+          set: vi.fn(() => ({
+            where: vi.fn(() => ({
+              returning: vi.fn().mockResolvedValue([{ aiCredits: 6 }]),
+            })),
+          })),
+        })),
+        insert: vi.fn(() => ({ values: insertValues })),
+      };
 
-      await expect(refundCredits(mockUserId, 1)).resolves.toBeUndefined();
+      vi.mocked(db.transaction).mockImplementation(async (fn: any) => fn(mockTx));
 
-      expect(db.update).toHaveBeenCalled();
+      const result = await refundCredits(mockUserId, 1, {
+        referenceType: 'GENERATION',
+        referenceId: 'gen-123',
+        description: 'AI 생성 실패 환불',
+      });
+
+      expect(result).toBe(6);
+      expect(db.transaction).toHaveBeenCalled();
+      expect(insertValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'REFUND',
+          amount: 1,
+          balanceAfter: 6,
+          referenceType: 'GENERATION',
+          referenceId: 'gen-123',
+          description: 'AI 생성 실패 환불',
+        })
+      );
     });
 
-    it('성공: 크레딧 여러 개 환불', async () => {
-      vi.mocked(db.update).mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(undefined),
-        }),
-      } as any);
+    it('성공: options 없이 기본 description 사용', async () => {
+      const insertValues = vi.fn();
+      const mockTx = {
+        update: vi.fn(() => ({
+          set: vi.fn(() => ({
+            where: vi.fn(() => ({
+              returning: vi.fn().mockResolvedValue([{ aiCredits: 11 }]),
+            })),
+          })),
+        })),
+        insert: vi.fn(() => ({ values: insertValues })),
+      };
 
-      await expect(refundCredits(mockUserId, 3)).resolves.toBeUndefined();
+      vi.mocked(db.transaction).mockImplementation(async (fn: any) => fn(mockTx));
+
+      const result = await refundCredits(mockUserId, 1);
+
+      expect(result).toBe(11);
+      expect(insertValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'REFUND',
+          description: '크레딧 환불 (1장)',
+          referenceType: null,
+          referenceId: null,
+        })
+      );
     });
 
-    it('성공: 환불은 항상 성공 (조건 없음)', async () => {
-      // refundCredits는 WHERE 조건 없이 항상 실행됨
-      vi.mocked(db.update).mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(undefined),
-        }),
-      } as any);
+    it('실패: 사용자를 찾을 수 없음', async () => {
+      const mockTx = {
+        update: vi.fn(() => ({
+          set: vi.fn(() => ({
+            where: vi.fn(() => ({
+              returning: vi.fn().mockResolvedValue([]),
+            })),
+          })),
+        })),
+        insert: vi.fn(() => ({ values: vi.fn() })),
+      };
 
-      await expect(refundCredits(mockUserId, 100)).resolves.toBeUndefined();
+      vi.mocked(db.transaction).mockImplementation(async (fn: any) => fn(mockTx));
+
+      await expect(refundCredits(mockUserId, 1)).rejects.toThrow('User not found');
+    });
+
+    it('반환값: balanceAfter 숫자 반환', async () => {
+      const mockTx = {
+        update: vi.fn(() => ({
+          set: vi.fn(() => ({
+            where: vi.fn(() => ({
+              returning: vi.fn().mockResolvedValue([{ aiCredits: 100 }]),
+            })),
+          })),
+        })),
+        insert: vi.fn(() => ({ values: vi.fn() })),
+      };
+
+      vi.mocked(db.transaction).mockImplementation(async (fn: any) => fn(mockTx));
+
+      const result = await refundCredits(mockUserId, 100);
+      expect(typeof result).toBe('number');
+      expect(result).toBe(100);
     });
   });
 
   describe('Integration: 차감 → 환불 플로우', () => {
-    it('성공: 실패 시나리오에서 크레딧 환불', async () => {
-      // 1. 크레딧 차감 성공
-      vi.mocked(db.update).mockReturnValueOnce({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([{ aiCredits: 4 }]),
-          }),
-        }),
-      } as any);
+    it('성공: 실패 시나리오에서 크레딧 환불 (감사 추적 포함)', async () => {
+      let txCallCount = 0;
 
-      await deductCredits(mockUserId, 1);
+      vi.mocked(db.transaction).mockImplementation(async (fn: any) => {
+        txCallCount++;
+        const mockTx = {
+          update: vi.fn(() => ({
+            set: vi.fn(() => ({
+              where: vi.fn(() => ({
+                returning: vi.fn().mockResolvedValue([{ aiCredits: txCallCount === 1 ? 4 : 5 }]),
+              })),
+            })),
+          })),
+          insert: vi.fn(() => ({ values: vi.fn() })),
+        };
+        return fn(mockTx);
+      });
+
+      // 1. 크레딧 차감 성공
+      const deductResult = await deductCredits(mockUserId, 1, {
+        referenceType: 'GENERATION',
+        referenceId: 'gen-abc',
+      });
+      expect(deductResult).toBe(4);
 
       // 2. 외부 API 실패 가정...
 
       // 3. 크레딧 환불
-      vi.mocked(db.update).mockReturnValueOnce({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(undefined),
-        }),
-      } as any);
+      const refundResult = await refundCredits(mockUserId, 1, {
+        referenceType: 'GENERATION',
+        referenceId: 'gen-abc',
+        description: 'AI 생성 실패 환불',
+      });
+      expect(refundResult).toBe(5);
 
-      await refundCredits(mockUserId, 1);
-
-      // 2번 호출됨: 차감 + 환불
-      expect(db.update).toHaveBeenCalledTimes(2);
+      // 2번의 트랜잭션: 차감 + 환불
+      expect(db.transaction).toHaveBeenCalledTimes(2);
     });
   });
 });

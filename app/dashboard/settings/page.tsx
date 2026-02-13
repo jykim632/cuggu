@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { CreditCard, ChevronRight, Sparkles, Loader2 } from "lucide-react";
+import { CreditTxList } from "@/components/credit/CreditTxList";
+import type { CreditTransaction } from "@/types/ai";
 import { motion } from "framer-motion";
 
 interface UserProfile {
@@ -29,12 +31,34 @@ interface PaymentHistory {
 export default function SettingsPage() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([]);
+  const [creditTransactions, setCreditTransactions] = useState<CreditTransaction[]>([]);
+  const [creditPagination, setCreditPagination] = useState<{
+    page: number; pageSize: number; total: number; totalPages: number;
+  } | null>(null);
+  const [creditPage, setCreditPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
+  const fetchCredits = useCallback(async (page: number) => {
+    try {
+      const res = await fetch(`/api/ai/credits?page=${page}&pageSize=10`);
+      const result = await res.json();
+      if (result.success) {
+        setCreditTransactions(result.data.transactions);
+        setCreditPagination(result.data.pagination);
+      }
+    } catch (error) {
+      console.error("크레딧 이력 조회 실패:", error);
+    }
+  }, []);
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    fetchCredits(creditPage);
+  }, [creditPage, fetchCredits]);
 
   const fetchData = async () => {
     try {
@@ -208,6 +232,16 @@ export default function SettingsPage() {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* 크레딧 이력 */}
+        <div className="mt-6 pt-6 border-t border-stone-200">
+          <h3 className="text-sm font-medium text-stone-700 mb-3">크레딧 이력</h3>
+          <CreditTxList
+            transactions={creditTransactions}
+            pagination={creditPagination ?? undefined}
+            onPageChange={setCreditPage}
+          />
         </div>
       </section>
 

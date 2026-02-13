@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { db } from '@/db';
 import { users, aiGenerations } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { createId } from '@paralleldrive/cuid2';
 import { checkCreditsFromUser, deductCredits, refundCredits } from '@/lib/ai/credits';
 import { detectFace } from '@/lib/ai/face-detection';
 import { uploadToS3, copyToS3 } from '@/lib/ai/s3';
@@ -137,16 +138,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // TODO: Drizzle 트랜잭션으로 크레딧 차감~이력 저장 묶기
-    // await db.transaction(async (tx) => {
-    //   await deductCredits(user.id, 1, tx);
-    //   ... S3 업로드, AI 생성
-    //   await tx.insert(aiGenerations).values(...);
-    // });
-    // 이유: 트랜잭션으로 묶으면 S3/Replicate 외부 API 실패 시 롤백 복잡. 현재 환불 로직이 더 명확.
-
-    // 9. 크레딧 차감 (트랜잭션)
-    await deductCredits(user.id, 1);
+    // 9. 크레딧 차감 (트랜잭션 + 감사 추적)
+    const generationId = createId();
+    const remainingCredits = await deductCredits(user.id, 1, {
+      referenceType: 'GENERATION',
+      referenceId: generationId,
+      description: 'AI 사진 생성',
+    });
 
     // 10. 원본 이미지 S3 업로드
     let originalUrl: string;
@@ -155,10 +153,15 @@ export async function POST(request: NextRequest) {
       originalUrl = result.url;
     } catch (error) {
       // 업로드 실패 시 크레딧 환불
-      await refundCredits(user.id, 1);
+      await refundCredits(user.id, 1, {
+        referenceType: 'GENERATION',
+        referenceId: generationId,
+        description: 'S3 업로드 실패 환불',
+      });
 
       // 실패 이력 저장
       await db.insert(aiGenerations).values({
+        id: generationId,
         userId: user.id,
         originalUrl: '', // S3 실패 시 빈 문자열
         style: styleData,
@@ -192,10 +195,15 @@ export async function POST(request: NextRequest) {
       cost = result.cost;
     } catch (error) {
       // AI 생성 실패 시 크레딧 환불
-      await refundCredits(user.id, 1);
+      await refundCredits(user.id, 1, {
+        referenceType: 'GENERATION',
+        referenceId: generationId,
+        description: 'AI 생성 실패 환불',
+      });
 
       // 생성 실패 이력 저장
       await db.insert(aiGenerations).values({
+        id: generationId,
         userId: user.id,
         originalUrl,
         style: styleData,
@@ -226,6 +234,7 @@ export async function POST(request: NextRequest) {
     const [generation] = await db
       .insert(aiGenerations)
       .values({
+        id: generationId,
         userId: user.id,
         originalUrl,
         style: styleData,
@@ -240,14 +249,7 @@ export async function POST(request: NextRequest) {
       })
       .returning();
 
-    // 14. 잔여 크레딧 조회
-    const updatedUser = await db.query.users.findFirst({
-      where: eq(users.id, user.id),
-      columns: { aiCredits: true },
-    });
-    const remainingCredits = updatedUser?.aiCredits ?? 0;
-
-    // 15. 응답
+    // 14. 응답 (remainingCredits는 deductCredits 반환값 사용)
     return NextResponse.json({
       success: true,
       data: {

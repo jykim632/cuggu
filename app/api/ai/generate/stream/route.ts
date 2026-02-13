@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { db } from '@/db';
 import { users, aiGenerations, aiGenerationJobs, aiReferencePhotos } from '@/db/schema';
 import { eq, sql } from 'drizzle-orm';
+import { createId } from '@paralleldrive/cuid2';
 import { checkCreditsFromUser, deductCredits, refundCredits } from '@/lib/ai/credits';
 import { detectFace } from '@/lib/ai/face-detection';
 import { uploadToS3, copyToS3 } from '@/lib/ai/s3';
@@ -137,6 +138,9 @@ export async function POST(request: NextRequest) {
         originalUrl = refPhoto.originalUrl;
       }
 
+      // generationId 미리 생성 (감사 추적 referenceId용)
+      const generationId = createId();
+
       // 5. 파일 검증 (referencePhotoId가 없을 때만)
       if (!referencePhotoId) {
         const uploadedImage = image!;
@@ -180,7 +184,11 @@ export async function POST(request: NextRequest) {
           originalUrl = s3UploadResult.url;
         } catch (error) {
           if (creditsDeducted) {
-            await refundCredits(user.id, 1);
+            await refundCredits(user.id, 1, {
+              referenceType: 'GENERATION',
+              referenceId: generationId,
+              description: 'S3 업로드 실패 환불',
+            });
           }
           await sendEvent('error', { error: 'S3 업로드 실패' });
           await writer.close();
@@ -189,6 +197,7 @@ export async function POST(request: NextRequest) {
       }
 
       // 6. 크레딧 확인 & 차감 (jobId가 없을 때만 — Job은 이미 예약됨)
+      let deductedBalance: number | undefined;
       if (!jobId) {
         const { hasCredits, balance } = checkCreditsFromUser(user);
         if (!hasCredits) {
@@ -197,8 +206,12 @@ export async function POST(request: NextRequest) {
           return;
         }
 
-        // 8. 크레딧 차감
-        await deductCredits(user.id, 1);
+        // 8. 크레딧 차감 (감사 추적 포함)
+        deductedBalance = await deductCredits(user.id, 1, {
+          referenceType: 'GENERATION',
+          referenceId: generationId,
+          description: 'AI 사진 생성 (스트리밍)',
+        });
         creditsDeducted = true;
       }
 
@@ -244,6 +257,7 @@ export async function POST(request: NextRequest) {
         const [generation] = await db
           .insert(aiGenerations)
           .values({
+            id: generationId,
             userId: user.id,
             originalUrl: originalUrl!,
             style: styleData,
@@ -281,12 +295,17 @@ export async function POST(request: NextRequest) {
         }
 
         // 12. 완료
-        const remainingCredits = (
-          await db.query.users.findFirst({
-            where: eq(users.id, user.id),
-            columns: { aiCredits: true },
-          })
-        )?.aiCredits ?? 0;
+        let remainingCredits: number;
+        if (deductedBalance !== undefined) {
+          remainingCredits = deductedBalance;
+        } else {
+          remainingCredits = (
+            await db.query.users.findFirst({
+              where: eq(users.id, user.id),
+              columns: { aiCredits: true },
+            })
+          )?.aiCredits ?? 0;
+        }
 
         await sendEvent('done', {
           id: generation.id,
@@ -301,7 +320,11 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         // AI 생성 실패 시 환불 (jobId가 있으면 크레딧 차감을 안 했으므로 환불 불필요)
         if (!jobId) {
-          await refundCredits(user.id, 1);
+          await refundCredits(user.id, 1, {
+            referenceType: 'GENERATION',
+            referenceId: generationId,
+            description: 'AI 생성 실패 환불 (스트리밍)',
+          });
         }
 
         // Job 실패 카운트 업데이트
@@ -319,6 +342,7 @@ export async function POST(request: NextRequest) {
 
         try {
           await db.insert(aiGenerations).values({
+            id: generationId,
             userId: user.id,
             originalUrl: originalUrl!,
             style: styleData,

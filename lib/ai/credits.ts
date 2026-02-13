@@ -36,49 +36,96 @@ export function checkCreditsFromUser(user: { aiCredits: number }): {
   };
 }
 
+export interface CreditTxOptions {
+  referenceType?: string;   // 'GENERATION' | 'THEME' | 'JOB' etc.
+  referenceId?: string;
+  description?: string;
+}
+
 /**
- * 크레딧 차감 (트랜잭션)
+ * 크레딧 차감 (트랜잭션 + 감사 추적)
  *
+ * @returns balanceAfter — 차감 후 잔액
  * @throws Error if insufficient credits or race condition
  */
 export async function deductCredits(
   userId: string,
-  amount: number = 1
-): Promise<void> {
-  const result = await db
-    .update(users)
-    .set({
-      aiCredits: sql`${users.aiCredits} - ${amount}`,
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(users.id, userId),
-        sql`${users.aiCredits} >= ${amount}`
+  amount: number = 1,
+  options?: CreditTxOptions
+): Promise<number> {
+  return await db.transaction(async (tx) => {
+    const result = await tx
+      .update(users)
+      .set({
+        aiCredits: sql`${users.aiCredits} - ${amount}`,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(users.id, userId),
+          sql`${users.aiCredits} >= ${amount}`
+        )
       )
-    )
-    .returning({ aiCredits: users.aiCredits });
+      .returning({ aiCredits: users.aiCredits });
 
-  // 조건부 UPDATE이므로 잔액 부족 시 result가 비어있음
-  if (result.length === 0) {
-    throw new Error('Insufficient credits');
-  }
+    if (result.length === 0) {
+      throw new Error('Insufficient credits');
+    }
+
+    const balanceAfter = result[0].aiCredits;
+
+    await tx.insert(aiCreditTransactions).values({
+      userId,
+      type: 'DEDUCT',
+      amount,
+      balanceAfter,
+      referenceType: options?.referenceType ?? null,
+      referenceId: options?.referenceId ?? null,
+      description: options?.description ?? `크레딧 차감 (${amount}장)`,
+    });
+
+    return balanceAfter;
+  });
 }
 
 /**
- * 크레딧 환불 (생성 실패 시)
+ * 크레딧 환불 (생성 실패 시, 감사 추적 포함)
+ *
+ * @returns balanceAfter — 환불 후 잔액
  */
 export async function refundCredits(
   userId: string,
-  amount: number = 1
-): Promise<void> {
-  await db
-    .update(users)
-    .set({
-      aiCredits: sql`${users.aiCredits} + ${amount}`,
-      updatedAt: new Date(),
-    })
-    .where(eq(users.id, userId));
+  amount: number = 1,
+  options?: CreditTxOptions
+): Promise<number> {
+  return await db.transaction(async (tx) => {
+    const result = await tx
+      .update(users)
+      .set({
+        aiCredits: sql`${users.aiCredits} + ${amount}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning({ aiCredits: users.aiCredits });
+
+    if (result.length === 0) {
+      throw new Error('User not found');
+    }
+
+    const balanceAfter = result[0].aiCredits;
+
+    await tx.insert(aiCreditTransactions).values({
+      userId,
+      type: 'REFUND',
+      amount,
+      balanceAfter,
+      referenceType: options?.referenceType ?? null,
+      referenceId: options?.referenceId ?? null,
+      description: options?.description ?? `크레딧 환불 (${amount}장)`,
+    });
+
+    return balanceAfter;
+  });
 }
 
 /**
@@ -120,7 +167,7 @@ export async function reserveCredits(
       balanceAfter,
       referenceType: 'JOB',
       referenceId: jobId,
-      description: `${amount}크레딧 예약`,
+      description: `AI 사진 배치 생성 (${amount}장)`,
     });
 
     return balanceAfter;
@@ -161,7 +208,7 @@ export async function releaseCredits(
       balanceAfter,
       referenceType: 'JOB',
       referenceId: jobId,
-      description: `${amount}크레딧 환불`,
+      description: `배치 생성 미사용분 환불 (${amount}장)`,
     });
 
     return balanceAfter;
@@ -169,30 +216,47 @@ export async function releaseCredits(
 }
 
 /**
- * 크레딧 거래 이력 조회
+ * 크레딧 거래 이력 조회 (페이지네이션 지원)
  */
 export async function getCreditHistory(
   userId: string,
-  limit: number = 20
-): Promise<CreditTransaction[]> {
-  const rows = await db
-    .select({
-      id: aiCreditTransactions.id,
-      type: aiCreditTransactions.type,
-      amount: aiCreditTransactions.amount,
-      balanceAfter: aiCreditTransactions.balanceAfter,
-      referenceType: aiCreditTransactions.referenceType,
-      referenceId: aiCreditTransactions.referenceId,
-      description: aiCreditTransactions.description,
-      createdAt: aiCreditTransactions.createdAt,
-    })
-    .from(aiCreditTransactions)
-    .where(eq(aiCreditTransactions.userId, userId))
-    .orderBy(desc(aiCreditTransactions.createdAt))
-    .limit(limit);
+  options: { page?: number; pageSize?: number } = {}
+): Promise<{ transactions: CreditTransaction[]; total: number }> {
+  const page = options.page ?? 1;
+  const pageSize = options.pageSize ?? 10;
+  const offset = (page - 1) * pageSize;
 
-  return rows.map((row) => ({
-    ...row,
-    createdAt: row.createdAt.toISOString(),
-  }));
+  const whereClause = eq(aiCreditTransactions.userId, userId);
+
+  const [rows, [countResult]] = await Promise.all([
+    db
+      .select({
+        id: aiCreditTransactions.id,
+        type: aiCreditTransactions.type,
+        amount: aiCreditTransactions.amount,
+        balanceAfter: aiCreditTransactions.balanceAfter,
+        referenceType: aiCreditTransactions.referenceType,
+        referenceId: aiCreditTransactions.referenceId,
+        description: aiCreditTransactions.description,
+        createdAt: aiCreditTransactions.createdAt,
+      })
+      .from(aiCreditTransactions)
+      .where(whereClause)
+      .orderBy(desc(aiCreditTransactions.createdAt))
+      .limit(pageSize)
+      .offset(offset),
+
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(aiCreditTransactions)
+      .where(whereClause),
+  ]);
+
+  return {
+    transactions: rows.map((row) => ({
+      ...row,
+      createdAt: row.createdAt.toISOString(),
+    })),
+    total: countResult.count,
+  };
 }
