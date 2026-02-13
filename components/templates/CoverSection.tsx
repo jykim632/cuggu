@@ -187,6 +187,8 @@ function CoverBottomLeft({ data, config }: CoverSectionProps) {
 }
 
 export function CoverSection({ data, config }: CoverSectionProps) {
+  if (!data.groom.name && !data.bride.name) return null;
+
   if (config.layout === 'bottom-left') {
     return <CoverBottomLeft data={data} config={config} />;
   }

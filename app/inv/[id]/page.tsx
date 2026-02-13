@@ -37,7 +37,10 @@ export async function generateMetadata({
     ? invitation.introMessage.slice(0, 100)
     : `${invitation.groomName}님과 ${invitation.brideName}님의 결혼식에 초대합니다`;
 
-  const ogImage = invitation.galleryImages?.[0] || invitation.aiPhotoUrl;
+  const ogImage =
+    invitation.galleryImages?.[0] ||
+    invitation.aiPhotoUrl ||
+    `${process.env.NEXT_PUBLIC_BASE_URL || 'https://cuggu.com'}/og-default.png`;
 
   return {
     title: `${title} | Cuggu`,
@@ -46,7 +49,7 @@ export async function generateMetadata({
       title,
       description,
       type: 'website',
-      ...(ogImage ? { images: [{ url: ogImage }] } : {}),
+      images: [{ url: ogImage }],
     },
   };
 }

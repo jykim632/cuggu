@@ -11,6 +11,8 @@ interface GreetingSectionProps {
 }
 
 export function GreetingSection({ data, theme }: GreetingSectionProps) {
+  if (!data.content.greeting) return null;
+
   const alignClass = resolveGreetingAlign(theme);
   const isQuote = theme.greetingLayout === 'quote-style';
 
