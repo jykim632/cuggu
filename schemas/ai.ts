@@ -37,13 +37,13 @@ export type AIGenerationStatus = z.infer<typeof AIGenerationStatusSchema>;
 
 // Base AI Generation Schema (DB 모델과 매칭)
 export const AIGenerationSchema = z.object({
-  id: z.string().cuid2(),
-  userId: z.string().cuid2(),
+  id: z.cuid2(),
+  userId: z.cuid2(),
 
-  originalUrl: z.string().url().max(500),
+  originalUrl: z.url().max(500),
   style: AIStyleSchema,
-  generatedUrls: z.array(z.string().url()).nullable(), // 4 URLs
-  selectedUrl: z.string().url().max(500).nullable(),
+  generatedUrls: z.array(z.url()).nullable(), // 4 URLs
+  selectedUrl: z.url().max(500).nullable(),
   status: AIGenerationStatusSchema.default('PENDING'),
   creditsUsed: z.number().int().min(1).default(1),
   cost: z.number().min(0), // USD
@@ -79,7 +79,7 @@ export const GenerateAIPhotoRequestSchema = z.object({
 // 서버에서 받는 요청 (FormData)
 export const GenerateAIPhotoServerRequestSchema = z.object({
   style: AIStyleSchema,
-  imageUrl: z.string().url(), // 이미 업로드된 이미지 URL
+  imageUrl: z.url(), // 이미 업로드된 이미지 URL
 });
 
 export type GenerateAIPhotoRequest = z.infer<typeof GenerateAIPhotoRequestSchema>;
@@ -87,8 +87,8 @@ export type GenerateAIPhotoServerRequest = z.infer<typeof GenerateAIPhotoServerR
 
 // AI 사진 선택 요청
 export const SelectAIPhotoRequestSchema = z.object({
-  generationId: z.string().cuid2(),
-  selectedUrl: z.string().url(),
+  generationId: z.cuid2(),
+  selectedUrl: z.url(),
 });
 
 export type SelectAIPhotoRequest = z.infer<typeof SelectAIPhotoRequestSchema>;
@@ -106,9 +106,9 @@ export type AIGenerationResponse = z.infer<typeof AIGenerationResponseSchema>;
 
 // AI 생성 상태 응답
 export const AIGenerationStatusResponseSchema = z.object({
-  id: z.string().cuid2(),
+  id: z.cuid2(),
   status: AIGenerationStatusSchema,
-  generatedUrls: z.array(z.string().url()).nullable(),
+  generatedUrls: z.array(z.url()).nullable(),
   progress: z.number().min(0).max(100).optional(), // 진행률 (%)
   errorMessage: z.string().optional(),
 });
@@ -117,7 +117,7 @@ export type AIGenerationStatusResponse = z.infer<typeof AIGenerationStatusRespon
 
 // AI 크레딧 정보 응답
 export const AICreditsResponseSchema = z.object({
-  userId: z.string().cuid2(),
+  userId: z.cuid2(),
   aiCredits: z.number().int().min(0),
   premiumPlan: z.enum(['FREE', 'PREMIUM']),
   totalGenerated: z.number().int().min(0),
@@ -134,7 +134,7 @@ export type AICreditsResponse = z.infer<typeof AICreditsResponseSchema>;
 export const ReplicateAPIRequestSchema = z.object({
   version: z.string(),
   input: z.object({
-    image: z.string().url(), // Base64 or URL
+    image: z.url(), // Base64 or URL
     prompt: z.string(),
     negative_prompt: z.string().optional(),
     num_outputs: z.number().int().min(1).max(4).default(4),
@@ -149,7 +149,7 @@ export type ReplicateAPIRequest = z.infer<typeof ReplicateAPIRequestSchema>;
 export const ReplicateAPIResponseSchema = z.object({
   id: z.string(),
   status: z.enum(['starting', 'processing', 'succeeded', 'failed', 'canceled']),
-  output: z.array(z.string().url()).nullable(),
+  output: z.array(z.url()).nullable(),
   error: z.string().nullable(),
   logs: z.string().optional(),
   metrics: z
@@ -216,7 +216,7 @@ export const AlbumGroupSchema = z.object({
 });
 
 export const AlbumImageSchema = z.object({
-  url: z.string().url(),
+  url: z.url(),
   generationId: z.string(),
   style: z.string(),
   role: z.enum(['GROOM', 'BRIDE']),
@@ -246,7 +246,7 @@ export const CreateReferencePhotoSchema = z.object({
 export const ReferencePhotoSchema = z.object({
   id: z.string(),
   role: z.enum(['GROOM', 'BRIDE']),
-  originalUrl: z.string().url(),
+  originalUrl: z.url(),
   faceDetected: z.boolean(),
   isActive: z.boolean(),
   createdAt: z.date(),
@@ -331,7 +331,7 @@ export const SSEStatusEventSchema = z.object({
 export const SSEImageEventSchema = z.object({
   type: z.literal('image'),
   index: z.number().int().min(0),
-  url: z.string().url(),
+  url: z.url(),
   progress: z.number().int().min(0),
   total: z.number().int().min(1),
 });
@@ -339,8 +339,8 @@ export const SSEImageEventSchema = z.object({
 export const SSEDoneEventSchema = z.object({
   type: z.literal('done'),
   id: z.string(),
-  originalUrl: z.string().url(),
-  generatedUrls: z.array(z.string().url()),
+  originalUrl: z.url(),
+  generatedUrls: z.array(z.url()),
   style: z.string(),
   albumId: z.string().nullable(),
   remainingCredits: z.number().int().min(0),
