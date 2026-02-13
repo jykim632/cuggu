@@ -43,6 +43,13 @@
       "when": 1770887480682,
       "tag": "0005_faithful_kid_colt",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1770964379778,
+      "tag": "0006_cascade-to-restrict",
+      "breakpoints": true
     }
   ]
 }
