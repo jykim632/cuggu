@@ -1,17 +1,14 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   X,
   Check,
   Loader2,
-  Upload,
   ImageIcon,
   Sparkles,
   ChevronLeft,
-  AlertCircle,
 } from 'lucide-react';
-import { GALLERY_CONFIG } from '@/lib/ai/constants';
 import type { AlbumImage } from '@/types/ai';
 
 // ── Types ──
@@ -24,12 +21,10 @@ interface Album {
   status: string;
 }
 
-type ModalTab = 'album' | 'device';
 type AlbumStep = 'list' | 'photos';
 
-interface AddPhotosModalProps {
+interface AlbumPickerModalProps {
   isOpen: boolean;
-  invitationId: string | undefined;
   existingUrls: string[];
   remainingCapacity: number;
   onClose: () => void;
@@ -38,31 +33,18 @@ interface AddPhotosModalProps {
 
 // ── Component ──
 
-export function AddPhotosModal({
+export function AlbumPickerModal({
   isOpen,
-  invitationId,
   existingUrls,
   remainingCapacity,
   onClose,
   onPhotosAdded,
-}: AddPhotosModalProps) {
-  // 공통
-  const [activeTab, setActiveTab] = useState<ModalTab>('album');
-
-  // 앨범 탭
+}: AlbumPickerModalProps) {
   const [albums, setAlbums] = useState<Album[]>([]);
   const [albumsLoading, setAlbumsLoading] = useState(false);
   const [albumStep, setAlbumStep] = useState<AlbumStep>('list');
   const [selectedAlbumId, setSelectedAlbumId] = useState<string | null>(null);
-  const [selectedAlbumUrls, setSelectedAlbumUrls] = useState<Set<string>>(
-    new Set()
-  );
-
-  // 기기 탭
-  const [uploadedUrls, setUploadedUrls] = useState<string[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedUrls, setSelectedUrls] = useState<Set<string>>(new Set());
 
   const existingSet = new Set(existingUrls);
 
@@ -90,30 +72,24 @@ export function AddPhotosModal({
   // 모달 열릴 때 초기화
   useEffect(() => {
     if (isOpen) {
-      setActiveTab('album');
       setAlbumStep('list');
       setSelectedAlbumId(null);
-      setSelectedAlbumUrls(new Set());
-      setUploadedUrls([]);
-      setUploadError(null);
+      setSelectedUrls(new Set());
       fetchAlbums();
     }
   }, [isOpen, fetchAlbums]);
 
-  // 현재 선택된 앨범
   const selectedAlbum = albums.find((a) => a.id === selectedAlbumId);
 
-  // 앨범 선택 핸들러
   const handleAlbumSelect = (albumId: string) => {
     setSelectedAlbumId(albumId);
-    setSelectedAlbumUrls(new Set());
+    setSelectedUrls(new Set());
     setAlbumStep('photos');
   };
 
-  // 사진 토글
   const handleTogglePhoto = (url: string) => {
     if (existingSet.has(url)) return;
-    setSelectedAlbumUrls((prev) => {
+    setSelectedUrls((prev) => {
       const next = new Set(prev);
       if (next.has(url)) {
         next.delete(url);
@@ -125,87 +101,9 @@ export function AddPhotosModal({
     });
   };
 
-  // 기기 업로드
-  const handleFileUpload = async (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-
-    setUploadError(null);
-
-    if (!invitationId) {
-      setUploadError('청첩장을 먼저 저장해주세요');
-      e.target.value = '';
-      return;
-    }
-
-    if (files.length > GALLERY_CONFIG.MAX_BATCH) {
-      setUploadError(
-        `한 번에 최대 ${GALLERY_CONFIG.MAX_BATCH}장까지 업로드 가능합니다`
-      );
-      e.target.value = '';
-      return;
-    }
-
-    const oversized = files.filter(
-      (f) => f.size > GALLERY_CONFIG.MAX_FILE_SIZE
-    );
-    if (oversized.length) {
-      setUploadError(
-        `${oversized.map((f) => f.name).join(', ')} 파일이 10MB를 초과합니다`
-      );
-      e.target.value = '';
-      return;
-    }
-
-    const maxUpload = remainingCapacity - uploadedUrls.length;
-    if (maxUpload <= 0) {
-      setUploadError(`갤러리 한도에 도달했습니다`);
-      e.target.value = '';
-      return;
-    }
-
-    setUploading(true);
-
-    try {
-      const formData = new FormData();
-      files.slice(0, maxUpload).forEach((f) => formData.append('files', f));
-      formData.append('invitationId', invitationId);
-
-      const res = await fetch('/api/upload/gallery', {
-        method: 'POST',
-        body: formData,
-      });
-      const json = await res.json();
-
-      if (!res.ok) {
-        throw new Error(json.error || '업로드 실패');
-      }
-
-      setUploadedUrls((prev) => [...prev, ...json.data.urls]);
-    } catch (err) {
-      setUploadError(
-        err instanceof Error ? err.message : '업로드 중 오류가 발생했습니다'
-      );
-    } finally {
-      setUploading(false);
-      e.target.value = '';
-    }
-  };
-
-  // 확인 버튼
   const handleConfirm = () => {
-    if (activeTab === 'album') {
-      onPhotosAdded([...selectedAlbumUrls]);
-    } else {
-      onPhotosAdded(uploadedUrls);
-    }
+    onPhotosAdded([...selectedUrls]);
   };
-
-  const confirmCount =
-    activeTab === 'album' ? selectedAlbumUrls.size : uploadedUrls.length;
-  const canConfirm = confirmCount > 0;
 
   if (!isOpen) return null;
 
@@ -222,7 +120,7 @@ export function AddPhotosModal({
         {/* header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-stone-200">
           <h2 className="text-base font-semibold text-stone-900">
-            사진 추가하기
+            앨범에서 가져오기
           </h2>
           <button
             onClick={onClose}
@@ -232,66 +130,30 @@ export function AddPhotosModal({
           </button>
         </div>
 
-        {/* tabs */}
-        <div className="flex border-b border-stone-200">
-          <button
-            onClick={() => setActiveTab('album')}
-            className={`flex-1 py-2.5 text-sm font-medium text-center transition-colors ${
-              activeTab === 'album'
-                ? 'text-pink-600 border-b-2 border-pink-500'
-                : 'text-stone-500 hover:text-stone-700'
-            }`}
-          >
-            앨범에서
-          </button>
-          <button
-            onClick={() => setActiveTab('device')}
-            className={`flex-1 py-2.5 text-sm font-medium text-center transition-colors ${
-              activeTab === 'device'
-                ? 'text-pink-600 border-b-2 border-pink-500'
-                : 'text-stone-500 hover:text-stone-700'
-            }`}
-          >
-            내 기기에서
-          </button>
-        </div>
-
         {/* content */}
         <div className="flex-1 overflow-y-auto p-5">
-          {activeTab === 'album' ? (
-            <AlbumTabContent
-              albums={albums}
-              loading={albumsLoading}
-              step={albumStep}
-              selectedAlbum={selectedAlbum ?? null}
-              selectedUrls={selectedAlbumUrls}
-              existingSet={existingSet}
-              remainingCapacity={remainingCapacity}
-              onAlbumSelect={handleAlbumSelect}
-              onTogglePhoto={handleTogglePhoto}
-              onBackToList={() => {
-                setAlbumStep('list');
-                setSelectedAlbumId(null);
-                setSelectedAlbumUrls(new Set());
-              }}
-            />
-          ) : (
-            <DeviceTabContent
-              invitationId={invitationId}
-              uploading={uploading}
-              uploadedUrls={uploadedUrls}
-              error={uploadError}
-              remainingCapacity={remainingCapacity - uploadedUrls.length}
-              fileInputRef={fileInputRef}
-              onFileUpload={handleFileUpload}
-            />
-          )}
+          <AlbumContent
+            albums={albums}
+            loading={albumsLoading}
+            step={albumStep}
+            selectedAlbum={selectedAlbum ?? null}
+            selectedUrls={selectedUrls}
+            existingSet={existingSet}
+            remainingCapacity={remainingCapacity}
+            onAlbumSelect={handleAlbumSelect}
+            onTogglePhoto={handleTogglePhoto}
+            onBackToList={() => {
+              setAlbumStep('list');
+              setSelectedAlbumId(null);
+              setSelectedUrls(new Set());
+            }}
+          />
         </div>
 
         {/* footer */}
         <div className="flex items-center justify-between px-5 py-3 border-t border-stone-200 bg-stone-50">
           <span className="text-xs text-stone-500">
-            남은 슬롯: {remainingCapacity - (activeTab === 'device' ? uploadedUrls.length : 0)}장
+            남은 슬롯: {remainingCapacity}장
           </span>
           <div className="flex items-center gap-2">
             <button
@@ -302,10 +164,12 @@ export function AddPhotosModal({
             </button>
             <button
               onClick={handleConfirm}
-              disabled={!canConfirm}
+              disabled={selectedUrls.size === 0}
               className="px-4 py-2 text-sm font-medium text-white bg-pink-500 hover:bg-pink-600 disabled:bg-stone-300 disabled:cursor-not-allowed rounded-lg transition-colors"
             >
-              {confirmCount > 0 ? `${confirmCount}장 추가` : '추가'}
+              {selectedUrls.size > 0
+                ? `${selectedUrls.size}장 추가`
+                : '추가'}
             </button>
           </div>
         </div>
@@ -314,9 +178,9 @@ export function AddPhotosModal({
   );
 }
 
-// ── Album Tab ──
+// ── Album Content ──
 
-function AlbumTabContent({
+function AlbumContent({
   albums,
   loading,
   step,
@@ -489,108 +353,6 @@ function AlbumTabContent({
               </button>
             );
           })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Device Tab ──
-
-function DeviceTabContent({
-  invitationId,
-  uploading,
-  uploadedUrls,
-  error,
-  remainingCapacity,
-  fileInputRef,
-  onFileUpload,
-}: {
-  invitationId: string | undefined;
-  uploading: boolean;
-  uploadedUrls: string[];
-  error: string | null;
-  remainingCapacity: number;
-  fileInputRef: React.RefObject<HTMLInputElement | null>;
-  onFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
-}) {
-  if (!invitationId) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
-        <AlertCircle className="w-6 h-6 text-amber-500" />
-        <p className="text-sm text-stone-700">
-          사진을 업로드하려면 먼저 청첩장을 저장해주세요
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      {error && (
-        <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
-          <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {/* 드래그-드롭 / 파일 선택 */}
-      <label
-        className={`flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-xl transition-colors cursor-pointer group ${
-          uploading
-            ? 'border-stone-300 bg-stone-50 cursor-wait'
-            : remainingCapacity <= 0
-            ? 'border-stone-200 bg-stone-50 cursor-not-allowed'
-            : 'border-stone-300 hover:border-pink-300 hover:bg-pink-50/30'
-        }`}
-      >
-        {uploading ? (
-          <div className="flex flex-col items-center gap-2">
-            <Loader2 className="w-8 h-8 text-stone-500 animate-spin" />
-            <p className="text-sm text-stone-600 font-medium">업로드 중...</p>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-2">
-            <Upload className="w-8 h-8 text-stone-400 group-hover:text-pink-400 transition-colors" />
-            <p className="text-sm text-stone-700 font-medium">
-              클릭하여 사진 선택
-            </p>
-            <p className="text-xs text-stone-500">
-              최대 10MB/장 ・ JPG, PNG, WebP
-            </p>
-          </div>
-        )}
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept="image/jpeg,image/png,image/webp"
-          onChange={onFileUpload}
-          disabled={uploading || remainingCapacity <= 0}
-          className="hidden"
-        />
-      </label>
-
-      {/* 업로드된 사진 미리보기 */}
-      {uploadedUrls.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-xs text-stone-500">
-            업로드 완료 ({uploadedUrls.length}장)
-          </p>
-          <div className="grid grid-cols-4 gap-2">
-            {uploadedUrls.map((url) => (
-              <div
-                key={url}
-                className="aspect-square rounded-lg overflow-hidden border border-stone-200"
-              >
-                <img
-                  src={url}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ))}
-          </div>
         </div>
       )}
     </div>
