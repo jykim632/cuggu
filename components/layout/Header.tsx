@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import { Menu, X } from "lucide-react";
 
@@ -34,9 +35,16 @@ export function Header() {
         {/* 로고 */}
         <Link
           href="/"
-          className="text-2xl font-bold text-rose-500 hover:text-rose-600 transition-colors"
+          className="flex items-center"
         >
-          Cuggu
+          <Image
+            src="/brand/cuggu-lockup.svg"
+            alt="Cuggu"
+            width={140}
+            height={45}
+            className="h-16 w-auto"
+            priority
+          />
         </Link>
 
         {/* 데스크톱 네비게이션 */}

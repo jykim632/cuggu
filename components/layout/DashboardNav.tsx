@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { FileHeart, Sparkles, Settings, LogOut, Home, Users } from "lucide-react";
@@ -45,14 +46,16 @@ export function DashboardNav() {
       <div className="px-5 py-5">
         <Link
           href="/"
-          className="flex items-center gap-2"
+          className="inline-flex items-center"
         >
-          <div className="w-7 h-7 rounded-md bg-rose-600 flex items-center justify-center">
-            <span className="text-white font-bold text-sm">C</span>
-          </div>
-          <span className="text-base font-semibold text-stone-900">
-            Cuggu
-          </span>
+          <Image
+            src="/brand/cuggu-lockup.svg"
+            alt="Cuggu"
+            width={128}
+            height={40}
+            className="h-16 w-auto"
+            priority
+          />
         </Link>
       </div>
 
