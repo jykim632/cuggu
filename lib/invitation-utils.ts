@@ -168,6 +168,8 @@ export function dbRecordToInvitation(row: DbInvitationRow): Invitation {
       fontFamily: ext.settings?.fontFamily,
       sectionOrder: ext.settings?.sectionOrder,
       calendarStyle: ext.settings?.calendarStyle ?? 'calendar',
+      requirePassword: ext.settings?.requirePassword ?? false,
+      password: ext.settings?.password,
     },
 
     customTheme: (ext as any).customTheme,

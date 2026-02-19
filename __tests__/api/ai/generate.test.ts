@@ -81,7 +81,7 @@ describe('POST /api/ai/generate', () => {
     role: string = 'GROOM',
   ): NextRequest => {
     const formData = new FormData();
-    const blob = new Blob([imageBuffer], { type: 'image/jpeg' });
+    const blob = new Blob([new Uint8Array(imageBuffer)], { type: 'image/jpeg' });
     formData.append('image', blob, 'test.jpg');
     formData.append('style', style);
     formData.append('role', role);
@@ -217,7 +217,7 @@ describe('POST /api/ai/generate', () => {
 
   describe('Authentication', () => {
     it('실패: 인증되지 않은 요청', async () => {
-      vi.mocked(auth).mockResolvedValue(null);
+      vi.mocked(auth).mockResolvedValue(null as any);
 
       const imageBuffer = createJPEGBuffer();
       const request = createMockRequest(imageBuffer);
@@ -230,7 +230,7 @@ describe('POST /api/ai/generate', () => {
     });
 
     it('실패: 사용자를 찾을 수 없음', async () => {
-      vi.mocked(db.query.users.findFirst).mockResolvedValue(null);
+      vi.mocked(db.query.users.findFirst).mockResolvedValue(null as any);
 
       const imageBuffer = createJPEGBuffer();
       const request = createMockRequest(imageBuffer);

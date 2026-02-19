@@ -175,7 +175,7 @@ export function GalleryTab() {
 
       {/* AI 웨딩 사진 섹션 */}
       <AIPhotoSection
-        invitationId={invitation.id}
+        invitationId={invitation.id ?? null}
         onAddToGallery={handleAddAIPhotos}
       />
     </div>

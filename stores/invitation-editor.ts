@@ -4,6 +4,12 @@ import { validateInvitation, type ValidationResult } from '@/lib/editor/validati
 
 import type { Invitation, ExtendedData } from '@/schemas/invitation';
 
+type DeepPartial<T> = T extends object
+  ? T extends (infer U)[]
+    ? DeepPartial<U>[]
+    : { [K in keyof T]?: DeepPartial<T[K]> }
+  : T;
+
 interface ValidationStatus {
   completed: boolean;
   hasError: boolean;
@@ -14,7 +20,7 @@ const RETRY_DELAY = 5000; // 5초
 
 interface InvitationEditorStore {
   // 상태
-  invitation: Partial<Invitation>;
+  invitation: DeepPartial<Invitation>;
   activeTab: string;
   isSaving: boolean;
   lastSaved: Date | null;
@@ -25,8 +31,8 @@ interface InvitationEditorStore {
   validationResult: ValidationResult;
 
   // 액션
-  setInvitation: (data: Partial<Invitation>) => void;
-  updateInvitation: (data: Partial<Invitation>) => void;
+  setInvitation: (data: DeepPartial<Invitation>) => void;
+  updateInvitation: (data: DeepPartial<Invitation>) => void;
   setActiveTab: (tab: string) => void;
   toggleSection: (sectionId: string, enabled: boolean) => void;
   getEnabledSections: () => Record<string, boolean>;

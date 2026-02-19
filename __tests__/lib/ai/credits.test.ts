@@ -66,7 +66,7 @@ describe('Credits System', () => {
     });
 
     it('실패: 사용자를 찾을 수 없음', async () => {
-      vi.mocked(db.query.users.findFirst).mockResolvedValue(null);
+      vi.mocked(db.query.users.findFirst).mockResolvedValue(null as any);
 
       await expect(checkCredits(mockUserId)).rejects.toThrow(
         'User not found'
