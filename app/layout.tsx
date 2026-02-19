@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Noto_Sans_KR, Noto_Serif_KR, Gowun_Batang, Nanum_Myeongjo } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "@/components/providers/SessionProvider";
+import { ToastProvider } from "@/components/ui/Toast";
 
 const notoSans = Noto_Sans_KR({
   subsets: ["latin"],
@@ -51,7 +52,9 @@ export default async function RootLayout({
       className={`${notoSans.variable} ${notoSerif.variable} ${gowunBatang.variable} ${nanumMyeongjo.variable}`}
     >
       <body className={notoSans.className}>
-        <SessionProvider>{children}</SessionProvider>
+        <SessionProvider>
+          <ToastProvider>{children}</ToastProvider>
+        </SessionProvider>
       </body>
     </html>
   );

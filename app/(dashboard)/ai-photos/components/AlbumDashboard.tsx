@@ -23,6 +23,7 @@ import { GenerationFloatingBar } from './GenerationFloatingBar';
 import { ReferencePhotoSection } from './ReferencePhotoSection';
 import { CreditDisplay } from './CreditDisplay';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useAIGeneration } from '@/hooks/useAIGeneration';
 
@@ -82,6 +83,7 @@ export function AlbumDashboard({
   const [newGroupName, setNewGroupName] = useState('');
   const [activeGroupFilter, setActiveGroupFilter] = useState<string | null>(null);
   const { confirm, isOpen: confirmOpen, options: confirmOptions, handleConfirm: onConfirm, handleCancel: onCancel } = useConfirm();
+  const { showToast } = useToast();
 
   // 참조 사진
   const [referencePhotos, setReferencePhotos] = useState<ReferencePhoto[]>([]);
@@ -100,6 +102,34 @@ export function AlbumDashboard({
     onCreditsChange,
     onComplete: onRefreshAlbum,
   });
+
+  // ── 생성 완료 시 toast 피드백 ──
+  const wasGeneratingRef = useRef(false);
+
+  useEffect(() => {
+    const wasGenerating = wasGeneratingRef.current;
+    wasGeneratingRef.current = generation.state.isGenerating;
+
+    if (!wasGenerating || generation.state.isGenerating) return;
+
+    // isGenerating: true → false 전환 감지
+    const { error, jobResult, completedUrls } = generation.state;
+
+    if (error) {
+      showToast(error, 'error');
+    } else if (jobResult) {
+      // 배치 생성
+      if (jobResult.failedImages > 0) {
+        const msg = `${jobResult.completedImages}/${jobResult.totalImages}장 완료 (${jobResult.failedImages}장 실패${jobResult.creditsRefunded > 0 ? `, ${jobResult.creditsRefunded} 크레딧 환불` : ''})`;
+        showToast(msg, 'info');
+      } else {
+        showToast(`${jobResult.completedImages}장 생성 완료!`, 'success');
+      }
+    } else if (completedUrls.length > 0) {
+      // 단건 생성
+      showToast(`${completedUrls.length}장 생성 완료!`, 'success');
+    }
+  }, [generation.state.isGenerating, generation.state.error, generation.state.jobResult, generation.state.completedUrls, showToast]);
 
   // ── 생성 완료 시 자동 큐레이션 ──
   // 생성 중 completedUrls를 추적하고, album 갱신 시 자동으로 큐레이션에 추가

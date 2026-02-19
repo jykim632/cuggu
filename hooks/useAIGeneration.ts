@@ -117,6 +117,7 @@ export function useAIGeneration(options: UseAIGenerationOptions) {
                 completedUrls: event.generatedUrls,
               }));
               onCreditsChange?.(event.remainingCredits);
+              window.dispatchEvent(new CustomEvent('credits-updated', { detail: event.remainingCredits }));
               onComplete?.();
               break;
             case 'error':
@@ -200,6 +201,7 @@ export function useAIGeneration(options: UseAIGenerationOptions) {
               }));
             } else if (event.type === 'done') {
               onCreditsChange?.(event.remainingCredits);
+              window.dispatchEvent(new CustomEvent('credits-updated', { detail: event.remainingCredits }));
             } else if (event.type === 'error') {
               console.error(`Task ${i} failed:`, event.error);
             }

@@ -50,6 +50,18 @@ export function useCredits() {
     fetchCredits();
   }, [fetchCredits]);
 
+  // AI 생성 완료 시 자동 갱신
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const credits = (e as CustomEvent<number>).detail;
+      if (typeof credits === 'number') {
+        setState({ credits, isLoading: false, error: null });
+      }
+    };
+    window.addEventListener('credits-updated', handler);
+    return () => window.removeEventListener('credits-updated', handler);
+  }, []);
+
   return {
     ...state,
     refetch: fetchCredits,

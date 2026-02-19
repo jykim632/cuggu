@@ -1,5 +1,4 @@
 import { ReactNode } from 'react';
-import { ToastProvider } from '@/components/ui/Toast';
 
 interface EditorLayoutProps {
   children: ReactNode;
@@ -13,10 +12,8 @@ interface EditorLayoutProps {
  */
 export default function EditorLayout({ children }: EditorLayoutProps) {
   return (
-    <ToastProvider>
-      <div className="h-screen flex flex-col bg-white">
-        {children}
-      </div>
-    </ToastProvider>
+    <div className="h-screen flex flex-col bg-white">
+      {children}
+    </div>
   );
 }
