@@ -190,11 +190,19 @@ export function AlbumDashboard({
         setCuratedImages(updated);
         setGroups(album.groups ?? []);
         setNameInput(album.name);
-        // 서버에 저장
+        // 서버에 저장 — 실패 시 롤백
         fetch(`/api/ai/albums/${album.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ images: updated }),
+        }).then((res) => {
+          if (!res.ok) {
+            setCuratedImages(albumImages);
+            showToast('자동 큐레이션 저장에 실패했습니다', 'error');
+          }
+        }).catch(() => {
+          setCuratedImages(albumImages);
+          showToast('자동 큐레이션 저장에 실패했습니다', 'error');
         });
         return;
       }
@@ -209,15 +217,19 @@ export function AlbumDashboard({
   const handleSaveName = async () => {
     if (!nameInput.trim()) return;
     try {
-      await fetch(`/api/ai/albums/${album.id}`, {
+      const res = await fetch(`/api/ai/albums/${album.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: nameInput.trim() }),
       });
+      if (!res.ok) {
+        showToast('앨범 이름 저장에 실패했습니다', 'error');
+        return;
+      }
       setEditingName(false);
       onRefreshAlbum();
     } catch {
-      // 실패 시 무시
+      showToast('앨범 이름 저장에 실패했습니다', 'error');
     }
   };
 

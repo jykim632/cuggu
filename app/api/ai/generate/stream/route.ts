@@ -1,8 +1,8 @@
 import { NextRequest } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/db';
-import { users, aiGenerations, aiGenerationJobs, aiReferencePhotos } from '@/db/schema';
-import { eq, sql, inArray } from 'drizzle-orm';
+import { users, aiGenerations, aiGenerationJobs, aiReferencePhotos, aiAlbums } from '@/db/schema';
+import { eq, and, sql, inArray } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 import { checkCreditsFromUser, deductCredits, refundCredits, releaseCredits } from '@/lib/ai/credits';
 import { detectFace } from '@/lib/ai/face-detection';
@@ -108,7 +108,20 @@ export async function POST(request: NextRequest) {
       const styleData = styleValidation.data;
       style = styleData;
 
-      // 4.5 참조 사진 조회 (referencePhotoIds가 있을 때)
+      // 4.5 albumId 소유권 검증
+      let validatedAlbumId = albumId;
+      if (albumId) {
+        const album = await db.query.aiAlbums.findFirst({
+          where: and(eq(aiAlbums.id, albumId), eq(aiAlbums.userId, user.id)),
+          columns: { id: true },
+        });
+        if (!album) {
+          logger.warn('Invalid albumId — falling back to null', { userId: user.id, albumId });
+          validatedAlbumId = null;
+        }
+      }
+
+      // 4.6 참조 사진 조회 (referencePhotoIds가 있을 때)
       let imageUrls: string[] = [];
 
       if (referencePhotoIds.length > 0) {
@@ -240,7 +253,7 @@ export async function POST(request: NextRequest) {
             role: role as 'GROOM' | 'BRIDE' | 'COUPLE',
             generatedUrls: persistedUrls,
             modelId: selectedModel?.id ?? modelId ?? null,
-            albumId: albumId || null,
+            albumId: validatedAlbumId || null,
             jobId: jobId || null,
             status: 'COMPLETED',
             creditsUsed: 1,
@@ -282,7 +295,7 @@ export async function POST(request: NextRequest) {
               await db.update(aiGenerationJobs).set({
                 status: finalStatus,
                 completedAt: new Date(),
-              }).where(eq(aiGenerationJobs.id, jobId));
+              }).where(and(eq(aiGenerationJobs.id, jobId), eq(aiGenerationJobs.status, 'PROCESSING')));
             }
           }
         }
@@ -305,7 +318,7 @@ export async function POST(request: NextRequest) {
           originalUrl: imageUrls[0],
           generatedUrls: persistedUrls,
           style: styleData,
-          albumId: albumId || null,
+          albumId: validatedAlbumId || null,
           remainingCredits,
           ...(jobProgress && { jobProgress }),
         });
@@ -344,7 +357,7 @@ export async function POST(request: NextRequest) {
             await db.update(aiGenerationJobs).set({
               status: finalStatus,
               completedAt: new Date(),
-            }).where(eq(aiGenerationJobs.id, jobId));
+            }).where(and(eq(aiGenerationJobs.id, jobId), eq(aiGenerationJobs.status, 'PROCESSING')));
           }
         }
 
@@ -362,7 +375,7 @@ export async function POST(request: NextRequest) {
             style: styleData,
             role: role as 'GROOM' | 'BRIDE' | 'COUPLE',
             modelId: selectedModel?.id ?? modelId ?? null,
-            albumId: albumId || null,
+            albumId: validatedAlbumId || null,
             jobId: jobId || null,
             status: 'FAILED',
             creditsUsed: 0,

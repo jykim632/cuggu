@@ -244,6 +244,7 @@ export function AlbumOnboarding({ onAlbumCreated }: AlbumOnboardingProps) {
   // ── Helpers ──
   const hasAnyUpload = !!(groom.existing || bride.existing);
   const isAnyUploading = groom.uploading || bride.uploading;
+  const canCreateAlbum = canProceedFromName && hasAnyUpload;
 
   return (
     <div className="mx-auto max-w-md space-y-6">
@@ -379,33 +380,31 @@ export function AlbumOnboarding({ onAlbumCreated }: AlbumOnboardingProps) {
         )}
 
         {step === 'photos' && (
-          <div className="flex items-center gap-2">
-            {!hasAnyUpload && (
+          <div className="flex flex-col items-end gap-1.5">
+            <div className="flex items-center gap-2">
               <button
                 onClick={handleCreateAlbum}
-                disabled={creating || isAnyUploading}
-                className="text-sm text-stone-500 hover:text-stone-700 disabled:opacity-50"
+                disabled={creating || isAnyUploading || !canCreateAlbum}
+                className="flex items-center gap-2 rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-rose-700 disabled:bg-stone-300"
               >
-                나중에 할게요
+                {creating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    앨범 생성 중...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    앨범 만들기
+                  </>
+                )}
               </button>
+            </div>
+            {!hasAnyUpload && !loadingPhotos && (
+              <p className="text-xs text-stone-400">
+                참조 사진을 최소 1장 등록해주세요
+              </p>
             )}
-            <button
-              onClick={handleCreateAlbum}
-              disabled={creating || isAnyUploading}
-              className="flex items-center gap-2 rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-rose-700 disabled:bg-stone-300"
-            >
-              {creating ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  앨범 생성 중...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  앨범 만들기
-                </>
-              )}
-            </button>
           </div>
         )}
       </div>
