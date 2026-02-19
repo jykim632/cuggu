@@ -153,8 +153,6 @@ export default function AlbumDetailPage() {
     }
   };
 
-  const applyImageUrls = (album?.images ?? []).map((img) => img.url);
-
   return (
     <div className="container mx-auto max-w-7xl space-y-6 p-6">
       {/* Header */}
@@ -240,10 +238,10 @@ export default function AlbumDetailPage() {
       {/* 적용 모달 */}
       <ApplyToInvitationModal
         isOpen={showApplyModal}
-        imageUrls={applyImageUrls}
+        images={album?.images ?? []}
+        groups={album?.groups ?? []}
         onClose={() => setShowApplyModal(false)}
-        onApplied={(name) => {
-          const count = applyImageUrls.length;
+        onApplied={(name, count) => {
           setApplyToast(`${count}장이 ${name}에 추가됨`);
         }}
       />

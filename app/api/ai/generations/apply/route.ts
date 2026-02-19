@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 const ApplySchema = z.object({
   invitationId: z.string().min(1),
-  imageUrls: z.array(z.string().url()).min(1).max(10),
+  imageUrls: z.array(z.string().url()).min(1).max(50),
 });
 
 /**

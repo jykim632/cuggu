@@ -21,6 +21,13 @@ interface AlbumCurationProps {
   onToggleTag: (url: string, tag: string) => void;
   onAddCustomTag: (url: string, tag: string) => void;
   onImagesChange: (images: AlbumImage[], action?: string) => void;
+  onConfirm: (options: {
+    title: string;
+    description?: string;
+    confirmText?: string;
+    cancelText?: string;
+    variant?: 'danger' | 'warning' | 'info';
+  }) => Promise<boolean>;
 }
 
 export function AlbumCuration({
@@ -33,6 +40,7 @@ export function AlbumCuration({
   onToggleTag,
   onAddCustomTag,
   onImagesChange,
+  onConfirm,
 }: AlbumCurationProps) {
   const [selectionMode, setSelectionMode] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
@@ -91,12 +99,20 @@ export function AlbumCuration({
     });
   };
 
-  const handleRemove = useCallback((url: string) => {
+  const handleRemove = useCallback(async (url: string) => {
+    const confirmed = await onConfirm({
+      title: '이 사진을 앨범에서 제외하시겠습니까?',
+      description: '생성된 사진은 삭제되지 않으며, 다시 추가할 수 있습니다.',
+      confirmText: '제외',
+      cancelText: '취소',
+      variant: 'warning',
+    });
+    if (!confirmed) return;
     const filtered = images
       .filter((img) => img.url !== url)
       .map((img, i) => ({ ...img, sortOrder: i }));
     onImagesChange(filtered, '사진 삭제');
-  }, [images, onImagesChange]);
+  }, [images, onImagesChange, onConfirm]);
 
   const handleImageClick = useCallback((url: string) => {
     if (selectionMode) {
@@ -162,10 +178,10 @@ export function AlbumCuration({
         </h3>
         <button
           onClick={handleToggleMode}
-          className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+          className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
             selectionMode
               ? 'bg-rose-100 text-rose-700'
-              : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+              : 'border border-stone-300 bg-white text-stone-700 hover:bg-stone-50'
           }`}
         >
           {selectionMode ? '완료' : '선택'}
@@ -342,9 +358,9 @@ function ImageCard({
               e.stopPropagation();
               onTagEditRequest(isTagEditing ? null : image.url);
             }}
-            className="absolute right-1 bottom-1 rounded-full bg-black/50 p-0.5 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-500 cursor-pointer"
+            className="absolute right-1.5 bottom-1.5 rounded-full bg-black/70 p-1 text-white opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100 shadow-lg hover:bg-rose-500 cursor-pointer"
           >
-            <Tag className="w-3 h-3" />
+            <Tag className="w-3.5 h-3.5" />
           </div>
         )}
 
@@ -355,9 +371,9 @@ function ImageCard({
               e.stopPropagation();
               onRemove(image.url);
             }}
-            className="absolute left-1 bottom-1 rounded-full bg-black/50 p-0.5 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 cursor-pointer"
+            className="absolute right-1.5 top-1.5 rounded-full bg-black/70 p-1 text-white opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100 shadow-lg hover:bg-red-500 cursor-pointer"
           >
-            <X className="w-3 h-3" />
+            <X className="w-3.5 h-3.5" />
           </div>
         )}
       </button>

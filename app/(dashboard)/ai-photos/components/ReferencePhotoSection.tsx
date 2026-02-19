@@ -174,9 +174,7 @@ export function ReferencePhotoSection({
   // ── 컴팩트 모드 ──
   if (compact) {
     return (
-      <div className="rounded-xl border border-stone-200 bg-stone-50 p-4">
-        <h4 className="text-sm font-medium text-stone-700 mb-3">참조 사진</h4>
-
+      <div className="space-y-3">
         <div className="flex gap-3">
           {ROLES.map((role) => {
             const existing = getExisting(role);
@@ -305,7 +303,7 @@ export function ReferencePhotoSection({
 
   // ── 풀 모드 (사진 0장) ──
   return (
-    <div className="space-y-4 rounded-xl border border-stone-200 bg-stone-50 p-6">
+    <div className="space-y-4">
       <div className="text-center">
         <p className="text-sm font-medium text-stone-700">참조 사진을 먼저 업로드하세요</p>
         <p className="text-xs text-stone-500 mt-1">
