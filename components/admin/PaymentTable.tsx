@@ -35,6 +35,7 @@ const methodLabels: Record<string, string> = {
   TOSS: "토스",
   KAKAO_PAY: "카카오페이",
   CARD: "카드",
+  NAVER_PAY: "네이버페이",
 };
 
 export function PaymentTable({ payments }: PaymentTableProps) {

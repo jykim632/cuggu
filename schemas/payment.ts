@@ -18,7 +18,9 @@ export const PaymentStatusSchema = z.enum([
   'REFUNDED',
 ]);
 
-export const PaymentMethodSchema = z.enum(['TOSS', 'KAKAO_PAY', 'CARD']);
+export const PaymentMethodSchema = z.enum(['TOSS', 'KAKAO_PAY', 'CARD', 'NAVER_PAY']);
+export const PaymentChannelSchema = z.enum(['SITE', 'SMARTSTORE']);
+export type PaymentChannel = z.infer<typeof PaymentChannelSchema>;
 
 export type PaymentType = z.infer<typeof PaymentTypeSchema>;
 export type PaymentStatus = z.infer<typeof PaymentStatusSchema>;
@@ -80,6 +82,19 @@ export const PaymentListResponseSchema = z.object({
 });
 
 export type PaymentListResponse = z.infer<typeof PaymentListResponseSchema>;
+
+// ============================================================
+// Smartstore Activation Schema
+// ============================================================
+
+export const ActivateSmartStoreRequestSchema = z.object({
+  productOrderId: z
+    .string()
+    .min(1, '상품주문번호를 입력하세요')
+    .regex(/^\d+$/, '상품주문번호는 숫자만 가능합니다'),
+});
+
+export type ActivateSmartStoreRequest = z.infer<typeof ActivateSmartStoreRequestSchema>;
 
 // ============================================================
 // Toss Payments Schemas

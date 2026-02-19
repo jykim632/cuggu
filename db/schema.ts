@@ -116,6 +116,11 @@ export const paymentMethodEnum = pgEnum('payment_method', [
   'TOSS',
   'KAKAO_PAY',
   'CARD',
+  'NAVER_PAY',
+]);
+export const paymentChannelEnum = pgEnum('payment_channel', [
+  'SITE',
+  'SMARTSTORE',
 ]);
 
 // ============================================================
@@ -396,8 +401,10 @@ export const payments = pgTable(
     amount: integer('amount').notNull(), // KRW
     creditsGranted: integer('credits_granted'),
     status: paymentStatusEnum('status').default('PENDING').notNull(),
+    channel: paymentChannelEnum('channel').default('SITE').notNull(),
     orderId: varchar('order_id', { length: 255 }).unique(),
     paymentKey: varchar('payment_key', { length: 255 }),
+    smartstoreOrderId: varchar('smartstore_order_id', { length: 64 }).unique(),
 
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },

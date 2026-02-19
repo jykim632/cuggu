@@ -40,6 +40,7 @@ export async function GET() {
         amount: true,
         creditsGranted: true,
         status: true,
+        channel: true,
         orderId: true,
         createdAt: true,
       },
@@ -60,6 +61,7 @@ export async function GET() {
         typeDescriptions[payment.type] || payment.type,
       status: payment.status,
       method: payment.method,
+      channel: payment.channel,
       orderId: payment.orderId,
     }));
 

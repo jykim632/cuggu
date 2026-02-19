@@ -10,6 +10,7 @@ interface PaymentHistory {
   description: string;
   status: string;
   method: string;
+  channel: string;
   orderId: string | null;
 }
 
@@ -64,6 +65,11 @@ export function PaymentsTab() {
                     <p className="text-sm font-medium text-stone-900">
                       {payment.description}
                     </p>
+                    {payment.channel === 'SMARTSTORE' && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                        스마트스토어
+                      </span>
+                    )}
                     <span
                       className={`
                         text-xs px-2 py-0.5 rounded-full
