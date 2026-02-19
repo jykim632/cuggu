@@ -6,16 +6,19 @@ import {
   Camera,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   Pencil,
   Check,
   X,
   Loader2,
   FolderPlus,
   Tag,
+  Images,
 } from 'lucide-react';
 import { createId } from '@paralleldrive/cuid2';
-import { AIStyle, PersonRole, SnapType, SNAP_TYPES, AlbumImage, AlbumGroup, AI_STYLES, ReferencePhoto } from '@/types/ai';
+import { AIStyle, PersonRole, SnapType, SNAP_TYPES, AlbumImage, AlbumGroup, ReferencePhoto } from '@/types/ai';
 import { AlbumCuration } from './AlbumCuration';
+import { GeneratedPhotosDrawer } from './GeneratedPhotosDrawer';
 import { GenerationCard } from './GenerationCard';
 import { GenerationWizard, WizardConfig } from './GenerationWizard';
 import { BatchGenerationView } from './BatchGenerationView';
@@ -92,6 +95,9 @@ export function AlbumDashboard({
   // 생성 wizard
   const [showWizard, setShowWizard] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+
+  // Drawer
+  const [showDrawer, setShowDrawer] = useState(false);
 
   const snapType = album.snapType as SnapType | null;
 
@@ -355,6 +361,27 @@ export function AlbumDashboard({
     saveCuration(updated, groups, exists ? '사진 삭제' : '사진 추가');
   }, [curatedImages, groups, saveCuration]);
 
+  // ── 다중 이미지 앨범 추가 (Drawer용) ──
+  const handleAddMultipleToAlbum = useCallback((items: { gen: Generation; url: string }[]) => {
+    const curatedUrlSet = new Set(curatedImages.map((img) => img.url));
+    const newImages: AlbumImage[] = items
+      .filter(({ url }) => !curatedUrlSet.has(url))
+      .map(({ gen, url }, i) => ({
+        url,
+        generationId: gen.id,
+        style: gen.style as AIStyle,
+        role: (gen.role ?? 'GROOM') as PersonRole,
+        sortOrder: curatedImages.length + i,
+      }));
+
+    if (newImages.length === 0) return;
+
+    const updated = [...curatedImages, ...newImages];
+    setCuratedImages(updated);
+    saveCuration(updated, groups, `${newImages.length}장 추가`);
+    showToast(`${newImages.length}장을 앨범에 추가했습니다`, 'success');
+  }, [curatedImages, groups, saveCuration, showToast]);
+
   // ── Wizard 생성 콜백 ──
   const handleWizardGenerate = useCallback(async (config: WizardConfig) => {
     setShowWizard(false);
@@ -425,14 +452,6 @@ export function AlbumDashboard({
       // 실패 시 무시
     }
   };
-
-  // ── 스타일별 그룹핑 ──
-  const generationsByStyle = album.generations.reduce((acc, gen) => {
-    const key = gen.style;
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(gen);
-    return acc;
-  }, {} as Record<string, Generation[]>);
 
   const snapTypeInfo = SNAP_TYPES.find((t) => t.value === snapType);
   const curatedCount = curatedImages.length;
@@ -697,52 +716,31 @@ export function AlbumDashboard({
         onImagesChange={handleCurationChange}
       />
 
-      {/* ── 생성된 사진 (스타일별 그룹) ── */}
-      {Object.keys(generationsByStyle).length > 0 && (
-        <div className="space-y-6">
-          <h3 className="text-sm font-semibold text-stone-800">생성된 사진</h3>
-
-          {Object.entries(generationsByStyle).map(([style, gens]) => {
-            const styleInfo = AI_STYLES.find((s) => s.value === style);
-
-            return (
-              <div key={style} className="space-y-3">
-                <p className="text-xs font-medium text-stone-500">
-                  {styleInfo?.label ?? style} ({gens.reduce((s, g) => s + (g.generatedUrls?.length ?? 0), 0)}장)
-                </p>
-
-                <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
-                  {gens.flatMap((gen) =>
-                    (gen.generatedUrls ?? []).map((url) => {
-                      const isInAlbum = curatedImages.some((img) => img.url === url);
-
-                      return (
-                        <div
-                          key={url}
-                          onClick={() => handleToggleImageInAlbum(gen, url)}
-                          className={`
-                            group relative aspect-square overflow-hidden rounded-lg border-2 cursor-pointer transition-all
-                            ${isInAlbum ? 'border-rose-500 ring-2 ring-rose-500/20' : 'border-stone-200 hover:border-stone-300'}
-                          `}
-                        >
-                          <img src={url} alt="" className="h-full w-full object-cover" />
-                          {isInAlbum && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-rose-500/20">
-                              <div className="rounded-full bg-rose-500 p-1">
-                                <Check className="w-3 h-3 text-white" />
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      {/* ── 생성된 사진 Drawer 트리거 ── */}
+      {totalGenerated > 0 && (
+        <button
+          onClick={() => setShowDrawer(true)}
+          className="flex w-full items-center justify-between rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 transition-colors hover:bg-stone-100"
+        >
+          <div className="flex items-center gap-2.5">
+            <Images className="w-4 h-4 text-stone-500" />
+            <span className="text-sm font-medium text-stone-700">
+              생성된 사진 보기 ({totalGenerated}장)
+            </span>
+          </div>
+          <ChevronRight className="w-4 h-4 text-stone-400" />
+        </button>
       )}
+
+      {/* Drawer */}
+      <GeneratedPhotosDrawer
+        isOpen={showDrawer}
+        onClose={() => setShowDrawer(false)}
+        generations={album.generations}
+        curatedImages={curatedImages}
+        onAddToAlbum={handleToggleImageInAlbum}
+        onAddMultipleToAlbum={handleAddMultipleToAlbum}
+      />
 
       {/* ── 생성 중 최소화 바 ── */}
       {generation.state.isGenerating && isMinimized && (

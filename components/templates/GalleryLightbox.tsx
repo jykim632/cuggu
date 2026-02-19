@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence, type PanInfo } from "framer-motion";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 
@@ -8,6 +9,8 @@ interface GalleryLightboxProps {
   images: string[];
   initialIndex: number;
   onClose: () => void;
+  /** 하단 액션 버튼 렌더 (현재 이미지 URL 전달) */
+  actions?: (currentUrl: string, currentIndex: number) => ReactNode;
 }
 
 const SWIPE_THRESHOLD = 50;
@@ -16,8 +19,12 @@ export function GalleryLightbox({
   images,
   initialIndex,
   onClose,
+  actions,
 }: GalleryLightboxProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   const goTo = useCallback(
     (direction: "prev" | "next") => {
@@ -40,20 +47,12 @@ export function GalleryLightbox({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose, goTo]);
 
-  // 스크롤 방지
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, []);
-
   const handleDragEnd = (_: unknown, info: PanInfo) => {
     if (info.offset.x > SWIPE_THRESHOLD) goTo("prev");
     else if (info.offset.x < -SWIPE_THRESHOLD) goTo("next");
   };
 
-  return (
+  const content = (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -127,6 +126,19 @@ export function GalleryLightbox({
           />
         </motion.div>
       </AnimatePresence>
+
+      {/* 액션 바 (선택적) */}
+      {actions && (
+        <div
+          className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {actions(images[currentIndex], currentIndex)}
+        </div>
+      )}
     </motion.div>
   );
+
+  if (!mounted) return null;
+  return createPortal(content, document.body);
 }

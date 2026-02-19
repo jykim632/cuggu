@@ -2,7 +2,8 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, X } from "lucide-react";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -53,6 +54,9 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const config = variantConfig[variant];
   const Icon = config.icon;
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   // ESC 키로 닫기
   useEffect(() => {
@@ -64,13 +68,10 @@ export function ConfirmDialog({
 
     if (isOpen) {
       document.addEventListener("keydown", handleEscape);
-      // body 스크롤 방지
-      document.body.style.overflow = "hidden";
     }
 
     return () => {
       document.removeEventListener("keydown", handleEscape);
-      document.body.style.overflow = "unset";
     };
   }, [isOpen, isLoading, onClose]);
 
@@ -86,7 +87,7 @@ export function ConfirmDialog({
     }
   };
 
-  return (
+  const content = (
     <AnimatePresence>
       {isOpen && (
         <>
@@ -163,4 +164,7 @@ export function ConfirmDialog({
       )}
     </AnimatePresence>
   );
+
+  if (!mounted) return null;
+  return createPortal(content, document.body);
 }

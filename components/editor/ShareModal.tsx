@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, MessageCircle, Share2, X } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
@@ -63,12 +64,7 @@ export function ShareModal({ isOpen, onClose, invitation, isJustPublished = fals
     };
 
     document.addEventListener('keydown', handleEscape);
-    document.body.style.overflow = 'hidden';
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset';
-    };
+    return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
 
   const handleCopy = useCallback(async () => {
@@ -111,7 +107,7 @@ export function ShareModal({ isOpen, onClose, invitation, isJustPublished = fals
     }
   }, [shareUrl, shareTitle, handleCopy]);
 
-  return (
+  const content = (
     <AnimatePresence>
       {isOpen && (
         <>
@@ -220,4 +216,7 @@ export function ShareModal({ isOpen, onClose, invitation, isJustPublished = fals
       )}
     </AnimatePresence>
   );
+
+  if (typeof window === 'undefined') return null;
+  return createPortal(content, document.body);
 }
