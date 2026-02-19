@@ -32,18 +32,20 @@ async function downloadImageAsBase64(url: string): Promise<{ base64: string; mim
 export const geminiProvider: GenerationProvider = {
   providerType: 'gemini',
 
-  async generateImage({ prompt, imageUrl, modelConfig, variationIndex }): Promise<ImageOutput> {
+  async generateImage({ prompt, imageUrls, modelConfig, variationIndex }): Promise<ImageOutput> {
     const ai = getGeminiClient();
-    const fullPrompt = `${prompt}, keeping the exact same face, identical facial features, preserve the person's face from the reference image, variation ${variationIndex + 1}`;
+    const fullPrompt = `${prompt}, keeping the exact same faces, identical facial features, preserve each person's face from the reference images, variation ${variationIndex + 1}`;
 
-    // 참조 이미지 있으면 inlineData로 전달
+    // 모든 참조 이미지를 inlineData parts로 전달
     const parts: any[] = [];
 
     if (modelConfig.supportsReferenceImage) {
-      const { base64, mimeType } = await downloadImageAsBase64(imageUrl);
-      parts.push({
-        inlineData: { mimeType, data: base64 },
-      });
+      for (const url of imageUrls) {
+        const { base64, mimeType } = await downloadImageAsBase64(url);
+        parts.push({
+          inlineData: { mimeType, data: base64 },
+        });
+      }
     }
 
     parts.push({ text: fullPrompt });

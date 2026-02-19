@@ -15,22 +15,22 @@ const navItems = [
   },
   {
     title: "내 청첩장",
-    href: "/dashboard/invitations",
+    href: "/invitations",
     icon: FileHeart,
   },
   {
     title: "AI 포토 스튜디오",
-    href: "/dashboard/ai-photos",
+    href: "/ai-photos",
     icon: Sparkles,
   },
   {
     title: "RSVP 관리",
-    href: "/dashboard/rsvp",
+    href: "/rsvp",
     icon: Users,
   },
   {
     title: "설정",
-    href: "/dashboard/settings",
+    href: "/settings",
     icon: Settings,
   },
 ];
@@ -63,7 +63,9 @@ export function DashboardNav() {
       <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto mt-2">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href;
+          const isActive = item.href === "/dashboard"
+            ? pathname === "/dashboard"
+            : pathname.startsWith(item.href);
 
           return (
             <Link

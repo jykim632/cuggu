@@ -510,6 +510,7 @@ export function AlbumDashboard({
                   statusMessage={generation.state.statusMessage}
                   error={generation.state.error}
                   isGenerating={generation.state.isGenerating}
+                  jobResult={generation.state.jobResult}
                   onMinimize={() => setIsMinimized(true)}
                   onCancel={generation.cancel}
                   onDismiss={generation.reset}

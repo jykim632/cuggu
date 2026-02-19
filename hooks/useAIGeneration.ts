@@ -7,7 +7,7 @@ interface GenerationTask {
   index: number;
   style: string;
   role: string;
-  referencePhotoId: string;
+  referencePhotoIds: string[];
 }
 
 interface UseAIGenerationOptions {
@@ -15,6 +15,14 @@ interface UseAIGenerationOptions {
   modelId: string;
   onCreditsChange?: (credits: number) => void;
   onComplete?: () => void;
+}
+
+export interface JobResult {
+  completedImages: number;
+  failedImages: number;
+  totalImages: number;
+  creditsRefunded: number;
+  status: string;
 }
 
 interface GenerationState {
@@ -25,6 +33,7 @@ interface GenerationState {
   statusMessage: string;
   error: string | null;
   jobId: string | null;
+  jobResult: JobResult | null;
 }
 
 export function useAIGeneration(options: UseAIGenerationOptions) {
@@ -37,12 +46,13 @@ export function useAIGeneration(options: UseAIGenerationOptions) {
     statusMessage: '',
     error: null,
     jobId: null,
+    jobResult: null,
   });
   const abortRef = useRef<AbortController | null>(null);
 
   // Single generation: send one SSE request
   const generateSingle = useCallback(async (
-    referencePhotoId: string,
+    referencePhotoIds: string[],
     style: string,
     role: string,
   ) => {
@@ -63,7 +73,9 @@ export function useAIGeneration(options: UseAIGenerationOptions) {
       formData.append('role', role);
       formData.append('modelId', modelId);
       formData.append('albumId', albumId);
-      formData.append('referencePhotoId', referencePhotoId);
+      for (const id of referencePhotoIds) {
+        formData.append('referencePhotoIds', id);
+      }
 
       abortRef.current = new AbortController();
       const res = await fetch('/api/ai/generate/stream', {
@@ -135,6 +147,7 @@ export function useAIGeneration(options: UseAIGenerationOptions) {
       statusMessage: '배치 생성 시작...',
       error: null,
       jobId,
+      jobResult: null,
     });
 
     const urls: string[] = [];
@@ -154,7 +167,9 @@ export function useAIGeneration(options: UseAIGenerationOptions) {
         formData.append('modelId', modelId);
         formData.append('albumId', albumId);
         formData.append('jobId', jobId);
-        formData.append('referencePhotoId', task.referencePhotoId);
+        for (const id of task.referencePhotoIds) {
+          formData.append('referencePhotoIds', id);
+        }
 
         abortRef.current = new AbortController();
         const res = await fetch('/api/ai/generate/stream', {
@@ -205,21 +220,63 @@ export function useAIGeneration(options: UseAIGenerationOptions) {
       }
     }
 
-    // Complete the job
-    try {
-      await fetch(`/api/ai/jobs/${jobId}`, {
+    // Complete the job (서버 자동완료가 있으므로 best effort — 1회 재시도)
+    const completeJob = async () => {
+      const res = await fetch(`/api/ai/jobs/${jobId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'complete' }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        // 이미 서버에서 완료된 경우 — 정상
+        if (res.status === 400 && data.error?.includes('이미 완료')) return;
+        throw new Error(`PATCH failed: ${res.status}`);
+      }
+    };
+    try {
+      await completeJob();
     } catch {
-      // Job completion failure is non-critical
+      // 1회 재시도
+      try {
+        await new Promise(r => setTimeout(r, 2000));
+        await completeJob();
+      } catch {
+        // 서버 자동완료 + cron 안전망이 처리
+      }
     }
+
+    // Job 결과 조회 — 실패 수 + 환불 크레딧 확인
+    let jobResult: JobResult | null = null;
+    try {
+      const jobRes = await fetch(`/api/ai/jobs/${jobId}`);
+      if (jobRes.ok) {
+        const jobData = await jobRes.json();
+        if (jobData.success) {
+          const j = jobData.data;
+          jobResult = {
+            completedImages: j.completedImages,
+            failedImages: j.failedImages,
+            totalImages: j.totalImages,
+            creditsRefunded: j.creditsReserved - j.creditsUsed,
+            status: j.status,
+          };
+        }
+      }
+    } catch {
+      // 조회 실패해도 생성 결과는 정상 표시
+    }
+
+    const failedCount = tasks.length - urls.length;
+    const statusMsg = failedCount > 0
+      ? `${urls.length}/${tasks.length}장 완료 (${failedCount}장 실패)`
+      : `${urls.length}/${tasks.length}장 완료`;
 
     setState(prev => ({
       ...prev,
       isGenerating: false,
-      statusMessage: `${urls.length}/${tasks.length}장 완료`,
+      statusMessage: statusMsg,
+      jobResult,
     }));
     onComplete?.();
   }, [albumId, modelId, onCreditsChange, onComplete]);
@@ -238,6 +295,7 @@ export function useAIGeneration(options: UseAIGenerationOptions) {
       statusMessage: '',
       error: null,
       jobId: null,
+      jobResult: null,
     });
   }, []);
 

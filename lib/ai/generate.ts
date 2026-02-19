@@ -4,8 +4,8 @@
  */
 
 import { getProvider } from './providers';
-import { AI_MODELS, DEFAULT_MODEL, findModelById } from './models';
-import { buildPrompt, type AIStyle } from './prompts';
+import { DEFAULT_MODEL, findModelById } from './models';
+import { buildPrompt, buildCouplePrompt, type AIStyle } from './prompts';
 import { AI_CONFIG } from './constants';
 import { uploadToS3 } from './s3';
 
@@ -18,12 +18,12 @@ export interface GenerationResult {
 }
 
 /**
- * 웨딩 사진 4장 생성 (동기)
+ * 웨딩 사진 생성 (동기)
  */
 export async function generateWeddingPhotos(
-  imageUrl: string,
+  imageUrls: string[],
   style: AIStyle,
-  role: 'GROOM' | 'BRIDE',
+  role: 'GROOM' | 'BRIDE' | 'COUPLE',
   modelId?: string,
 ): Promise<GenerationResult> {
   const selectedModelId = modelId || DEFAULT_MODEL;
@@ -34,7 +34,9 @@ export async function generateWeddingPhotos(
   }
 
   const provider = getProvider(model.providerType);
-  const prompt = buildPrompt(style, role);
+  const prompt = role === 'COUPLE'
+    ? buildCouplePrompt(style)
+    : buildPrompt(style, role);
 
   const urls: string[] = [];
   const jobIds: string[] = [];
@@ -42,22 +44,17 @@ export async function generateWeddingPhotos(
   for (let i = 0; i < AI_CONFIG.BATCH_SIZE; i++) {
     const result = await provider.generateImage({
       prompt,
-      imageUrl,
+      imageUrls,
       modelConfig: model,
       variationIndex: i,
     });
 
     jobIds.push(result.providerJobId);
 
-    if (result.type === 'base64') {
-      // base64 → S3 업로드
-      const buffer = Buffer.from(result.data, 'base64');
-      const s3Result = await uploadToS3(buffer, result.mimeType || 'image/png', 'ai-generated');
-      urls.push(s3Result.url);
-    } else {
-      // URL 타입 (Replicate) - 그대로 전달, API route에서 copyToS3
-      urls.push(result.data);
-    }
+    // 모든 프로바이더가 base64 반환 → S3 업로드
+    const buffer = Buffer.from(result.data, 'base64');
+    const s3Result = await uploadToS3(buffer, result.mimeType || 'image/png', 'ai-generated');
+    urls.push(s3Result.url);
   }
 
   const cost = AI_CONFIG.BATCH_SIZE * model.costPerImage;
@@ -73,9 +70,9 @@ export async function generateWeddingPhotos(
  * 스트리밍 방식 웨딩 사진 생성 (1장씩 콜백)
  */
 export async function generateWeddingPhotosStream(
-  imageUrl: string,
+  imageUrls: string[],
   style: AIStyle,
-  role: 'GROOM' | 'BRIDE',
+  role: 'GROOM' | 'BRIDE' | 'COUPLE',
   onImageGenerated: (index: number, url: string) => void,
   modelId?: string,
 ): Promise<GenerationResult> {
@@ -87,7 +84,9 @@ export async function generateWeddingPhotosStream(
   }
 
   const provider = getProvider(model.providerType);
-  const prompt = buildPrompt(style, role);
+  const prompt = role === 'COUPLE'
+    ? buildCouplePrompt(style)
+    : buildPrompt(style, role);
 
   const urls: string[] = [];
   const jobIds: string[] = [];
@@ -95,21 +94,17 @@ export async function generateWeddingPhotosStream(
   for (let i = 0; i < AI_CONFIG.BATCH_SIZE; i++) {
     const result = await provider.generateImage({
       prompt,
-      imageUrl,
+      imageUrls,
       modelConfig: model,
       variationIndex: i,
     });
 
     jobIds.push(result.providerJobId);
 
-    let finalUrl: string;
-    if (result.type === 'base64') {
-      const buffer = Buffer.from(result.data, 'base64');
-      const s3Result = await uploadToS3(buffer, result.mimeType || 'image/png', 'ai-generated');
-      finalUrl = s3Result.url;
-    } else {
-      finalUrl = result.data;
-    }
+    // 모든 프로바이더가 base64 반환 → S3 업로드
+    const buffer = Buffer.from(result.data, 'base64');
+    const s3Result = await uploadToS3(buffer, result.mimeType || 'image/png', 'ai-generated');
+    const finalUrl = s3Result.url;
 
     urls.push(finalUrl);
     onImageGenerated(i, finalUrl);

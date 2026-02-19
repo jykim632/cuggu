@@ -126,7 +126,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-medium text-stone-500 uppercase tracking-wide">최근 청첩장</h2>
             <button
-              onClick={() => router.push("/dashboard/invitations")}
+              onClick={() => router.push("/invitations")}
               className="text-sm text-stone-500 hover:text-stone-700 transition-colors"
             >
               모두 보기

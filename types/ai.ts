@@ -14,7 +14,7 @@ export type AIStyle =
   | 'BLACK_AND_WHITE'
   | 'MINIMALIST_GALLERY';
 
-export type PersonRole = 'GROOM' | 'BRIDE';
+export type PersonRole = 'GROOM' | 'BRIDE' | 'COUPLE';
 
 export interface AIGenerationResult {
   id: string;
@@ -155,7 +155,7 @@ export interface JobTask {
   index: number;
   style: AIStyle;
   role: PersonRole;
-  referencePhotoId: string;
+  referencePhotoIds: string[];
 }
 
 export interface ReferencePhoto {

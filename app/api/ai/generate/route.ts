@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 import { checkCreditsFromUser, deductCredits, refundCredits } from '@/lib/ai/credits';
 import { detectFace } from '@/lib/ai/face-detection';
-import { uploadToS3, copyToS3 } from '@/lib/ai/s3';
+import { uploadToS3 } from '@/lib/ai/s3';
 import { generateWeddingPhotos, modelSupportsReferenceImage, type AIStyle } from '@/lib/ai/generate';
 import { findModelById } from '@/lib/ai/models';
 import { rateLimit } from '@/lib/ai/rate-limit';
@@ -167,12 +167,12 @@ export async function POST(request: NextRequest) {
     let generatedUrls: string[];
     let providerJobId: string;
     let cost: number;
-    const selectedModel = findModelById(modelId || 'flux-pro');
+    const selectedModel = modelId ? findModelById(modelId) : undefined;
 
     try {
       const result = await generateWeddingPhotos(
-        originalUrl,
-        styleData,
+        [originalUrl],
+        styleData as AIStyle,
         role as 'GROOM' | 'BRIDE',
         modelId || undefined
       );
@@ -201,22 +201,7 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    // 12. 생성된 이미지를 S3로 복사 (URL 타입인 경우만 - Replicate CDN → S3)
-    // base64 프로바이더(OpenAI, Gemini)는 generate.ts에서 이미 S3 업로드 완료
-    let persistedUrls = generatedUrls;
-    if (selectedModel?.providerType === 'replicate') {
-      const s3CopyResults = await Promise.allSettled(
-        generatedUrls.map((url) =>
-          copyToS3(url, `ai-generated/${user.id}`)
-        )
-      );
-      persistedUrls = generatedUrls.map((originalUrl, i) => {
-        const result = s3CopyResults[i];
-        return result.status === 'fulfilled' ? result.value.url : originalUrl;
-      });
-    }
-
-    // 13. 생성 이력 저장
+    // 12. 생성 이력 저장 (모든 프로바이더가 base64 → S3 업로드 완료 상태)
     const [generation] = await db
       .insert(aiGenerations)
       .values({
@@ -224,18 +209,17 @@ export async function POST(request: NextRequest) {
         userId: user.id,
         originalUrl,
         style: styleData,
-        generatedUrls: persistedUrls,
+        generatedUrls,
         status: 'COMPLETED',
         creditsUsed: 1,
         cost,
-        replicateId: selectedModel?.providerType === 'replicate' ? providerJobId : null,
         providerJobId,
-        providerType: selectedModel?.providerType ?? 'replicate',
+        providerType: selectedModel?.providerType ?? 'gemini',
         completedAt: new Date(),
       })
       .returning();
 
-    // 14. 응답 (remainingCredits는 deductCredits 반환값 사용)
+    // 13. 응답 (remainingCredits는 deductCredits 반환값 사용)
     return NextResponse.json({
       success: true,
       data: {

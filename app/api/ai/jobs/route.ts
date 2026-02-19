@@ -93,6 +93,10 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
+    // 커플 모드 여부: 역할 2개 = 커플
+    const isCouple = roles.length > 1;
+    const allRefPhotoIds = referencePhotoIds;
+
     // 6. Job 레코드 삽입
     const [job] = await db
       .insert(aiGenerationJobs)
@@ -114,19 +118,24 @@ export async function POST(request: NextRequest) {
       .returning();
 
     // 7. 태스크 목록 생성 (client-side orchestration용, DB 저장 안 함)
-    const tasks: { index: number; style: string; role: string; referencePhotoId: string }[] = [];
-    let taskIndex = 0;
+    const tasks: { index: number; style: string; role: string; referencePhotoIds: string[] }[] = [];
 
-    for (const style of styles) {
-      for (const role of roles) {
-        const referencePhotoId = refPhotoByRole.get(role)!;
-        tasks.push({
-          index: taskIndex++,
-          style,
-          role,
-          referencePhotoId,
-        });
-      }
+    for (let i = 0; i < totalImages; i++) {
+      tasks.push({
+        index: i,
+        style: styles[i % styles.length],
+        role: isCouple ? 'COUPLE' : roles[0],
+        referencePhotoIds: allRefPhotoIds,
+      });
+    }
+
+    // invariant: tasks.length === totalImages
+    if (tasks.length !== totalImages) {
+      logger.error('Task count mismatch', { tasksLength: tasks.length, totalImages, mode });
+      return NextResponse.json(
+        { error: 'Internal error: task count mismatch' },
+        { status: 500 }
+      );
     }
 
     logger.info('Job created', {

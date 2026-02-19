@@ -1,7 +1,8 @@
 'use client';
 
-import { Loader2, Check, AlertCircle, Minimize2, Square, X } from 'lucide-react';
+import { Loader2, Check, AlertCircle, Minimize2, Square, X, RefreshCcw, Gem } from 'lucide-react';
 import { motion } from 'framer-motion';
+import type { JobResult } from '@/hooks/useAIGeneration';
 
 interface BatchGenerationViewProps {
   totalImages: number;
@@ -10,6 +11,7 @@ interface BatchGenerationViewProps {
   statusMessage: string;
   error: string | null;
   isGenerating?: boolean;
+  jobResult?: JobResult | null;
   onMinimize?: () => void;
   onCancel?: () => void;
   onDismiss?: () => void;
@@ -22,6 +24,7 @@ export function BatchGenerationView({
   statusMessage,
   error,
   isGenerating = true,
+  jobResult,
   onMinimize,
   onCancel,
   onDismiss,
@@ -29,6 +32,7 @@ export function BatchGenerationView({
   const completedCount = completedUrls.length;
   const progress = totalImages > 0 ? (completedCount / totalImages) * 100 : 0;
   const isComplete = !isGenerating && completedCount > 0;
+  const hasFailures = jobResult && jobResult.failedImages > 0;
 
   // Estimate remaining time: ~25s per image
   const remainingImages = totalImages - completedCount;
@@ -37,12 +41,18 @@ export function BatchGenerationView({
   const seconds = estimatedSeconds % 60;
 
   return (
-    <div className={`space-y-4 rounded-xl border p-5 ${isComplete ? 'border-green-200 bg-green-50/30' : 'border-stone-200 bg-white'}`}>
+    <div className={`space-y-4 rounded-xl border p-5 ${
+      isComplete
+        ? hasFailures ? 'border-amber-200 bg-amber-50/30' : 'border-green-200 bg-green-50/30'
+        : 'border-stone-200 bg-white'
+    }`}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold text-stone-900">
-            {isComplete ? 'AI 촬영 완료' : 'AI 촬영 중...'}
+            {isComplete
+              ? hasFailures ? 'AI 촬영 부분 완료' : 'AI 촬영 완료'
+              : 'AI 촬영 중...'}
           </h3>
           <p className="text-xs text-stone-500 mt-0.5">{statusMessage}</p>
         </div>
@@ -145,6 +155,26 @@ export function BatchGenerationView({
           );
         })}
       </div>
+
+      {/* 배치 결과 요약 — 실패 + 환불 */}
+      {isComplete && jobResult && jobResult.failedImages > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>
+              {jobResult.totalImages}장 중 <strong>{jobResult.failedImages}장</strong>이 생성에 실패했습니다.
+            </span>
+          </div>
+          {jobResult.creditsRefunded > 0 && (
+            <div className="flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800">
+              <Gem className="w-4 h-4 shrink-0" />
+              <span>
+                미사용 크레딧 <strong>{jobResult.creditsRefunded}장</strong>이 자동 환불되었습니다.
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Error */}
       {error && (

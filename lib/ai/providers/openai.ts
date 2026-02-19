@@ -24,7 +24,7 @@ async function downloadImageAsBuffer(url: string): Promise<Buffer> {
 export const openaiProvider: GenerationProvider = {
   providerType: 'openai',
 
-  async generateImage({ prompt, imageUrl, modelConfig, variationIndex }): Promise<ImageOutput> {
+  async generateImage({ prompt, imageUrls, modelConfig, variationIndex }): Promise<ImageOutput> {
     const openai = getOpenAIClient();
     const fullPrompt = `${prompt}, variation ${variationIndex + 1}`;
 
@@ -50,14 +50,18 @@ export const openaiProvider: GenerationProvider = {
       };
     }
 
-    // gpt-image-1: 이미지 편집 (참조 이미지 입력)
-    const imageBuffer = await downloadImageAsBuffer(imageUrl);
-    const imageFile = await toFile(imageBuffer, 'reference.png', { type: 'image/png' });
+    // gpt-image-1: 모든 참조 이미지를 배열로 전달 (커플 모드: 2장, 솔로: 1장)
+    const imageFiles = await Promise.all(
+      imageUrls.map(async (url, i) => {
+        const buffer = await downloadImageAsBuffer(url);
+        return toFile(buffer, `reference-${i}.png`, { type: 'image/png' });
+      })
+    );
 
     const response = await openai.images.edit({
       model: 'gpt-image-1',
-      image: [imageFile],
-      prompt: `${fullPrompt}, keeping the exact same face, identical facial features, preserve the person's face from the reference image`,
+      image: imageFiles,
+      prompt: `${fullPrompt}, keeping the exact same faces from the reference images, identical facial features, preserve each person's face`,
       size: '1024x1536', // 세로 비율
     });
 

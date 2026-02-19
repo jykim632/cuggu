@@ -181,7 +181,8 @@ export async function reserveCredits(
 export async function releaseCredits(
   userId: string,
   amount: number,
-  jobId: string
+  jobId: string,
+  description?: string
 ): Promise<number> {
   return await db.transaction(async (tx) => {
     // 1. 크레딧 복구
@@ -208,7 +209,7 @@ export async function releaseCredits(
       balanceAfter,
       referenceType: 'JOB',
       referenceId: jobId,
-      description: `배치 생성 미사용분 환불 (${amount}장)`,
+      description: description ?? `배치 생성 미사용분 환불 (${amount}장)`,
     });
 
     return balanceAfter;

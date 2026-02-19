@@ -79,7 +79,7 @@ export default function AIPhotosPage() {
   const canCreateAlbum = albums.length < MAX_ALBUMS;
 
   const handleAlbumCreated = (albumId: string) => {
-    router.push(`/dashboard/ai-photos/${albumId}`);
+    router.push(`/ai-photos/${albumId}`);
   };
 
   return (
@@ -153,7 +153,7 @@ export default function AIPhotosPage() {
                 return (
                   <button
                     key={a.id}
-                    onClick={() => router.push(`/dashboard/ai-photos/${a.id}`)}
+                    onClick={() => router.push(`/ai-photos/${a.id}`)}
                     className="group relative flex flex-col rounded-xl border border-stone-200 bg-white p-4 text-left transition-all hover:border-rose-200 hover:shadow-md"
                   >
                     <div className="mb-3 flex h-32 items-center justify-center rounded-lg bg-stone-50 overflow-hidden">
@@ -191,7 +191,7 @@ export default function AIPhotosPage() {
                 return (
                   <button
                     key={a.id}
-                    onClick={() => router.push(`/dashboard/ai-photos/${a.id}`)}
+                    onClick={() => router.push(`/ai-photos/${a.id}`)}
                     className="flex items-center gap-4 rounded-xl border border-stone-200 bg-white px-4 py-3 text-left transition-all hover:bg-stone-50 hover:border-rose-200"
                   >
                     <div className="flex w-16 h-12 flex-shrink-0 items-center justify-center rounded-lg bg-stone-50 overflow-hidden">
@@ -242,7 +242,7 @@ export default function AIPhotosPage() {
                 return (
                   <button
                     key={a.id}
-                    onClick={() => router.push(`/dashboard/ai-photos/${a.id}`)}
+                    onClick={() => router.push(`/ai-photos/${a.id}`)}
                     className="group relative flex flex-col rounded-xl border border-stone-200 bg-white p-4 text-left transition-all hover:border-rose-200 hover:shadow-md"
                   >
                     <div className="mb-3 h-48 rounded-lg bg-stone-50 overflow-hidden">

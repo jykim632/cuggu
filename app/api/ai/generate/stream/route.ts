@@ -2,11 +2,11 @@ import { NextRequest } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/db';
 import { users, aiGenerations, aiGenerationJobs, aiReferencePhotos } from '@/db/schema';
-import { eq, sql } from 'drizzle-orm';
+import { eq, sql, inArray } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
-import { checkCreditsFromUser, deductCredits, refundCredits } from '@/lib/ai/credits';
+import { checkCreditsFromUser, deductCredits, refundCredits, releaseCredits } from '@/lib/ai/credits';
 import { detectFace } from '@/lib/ai/face-detection';
-import { uploadToS3, copyToS3 } from '@/lib/ai/s3';
+import { uploadToS3 } from '@/lib/ai/s3';
 import { generateWeddingPhotosStream, modelSupportsReferenceImage, type AIStyle } from '@/lib/ai/generate';
 import { findModelById } from '@/lib/ai/models';
 import { rateLimit } from '@/lib/ai/rate-limit';
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
       const modelId = formData.get('modelId') as string | null;
       const albumId = formData.get('albumId') as string | null;
       const jobId = formData.get('jobId') as string | null;
-      const referencePhotoId = formData.get('referencePhotoId') as string | null;
+      const referencePhotoIds = formData.getAll('referencePhotoIds') as string[];
 
       if (!styleRaw || !role) {
         await sendEvent('error', { error: 'Style and role are required' });
@@ -86,14 +86,14 @@ export async function POST(request: NextRequest) {
         return;
       }
 
-      if (!image && !referencePhotoId) {
-        await sendEvent('error', { error: 'Image or referencePhotoId is required' });
+      if (!image && referencePhotoIds.length === 0) {
+        await sendEvent('error', { error: 'Image or referencePhotoIds is required' });
         await writer.close();
         return;
       }
 
-      if (role !== 'GROOM' && role !== 'BRIDE') {
-        await sendEvent('error', { error: 'Role must be GROOM or BRIDE' });
+      if (role !== 'GROOM' && role !== 'BRIDE' && role !== 'COUPLE') {
+        await sendEvent('error', { error: 'Role must be GROOM, BRIDE, or COUPLE' });
         await writer.close();
         return;
       }
@@ -108,28 +108,31 @@ export async function POST(request: NextRequest) {
       const styleData = styleValidation.data;
       style = styleData;
 
-      // 4.5 참조 사진 조회 (referencePhotoId가 있을 때)
-      let originalUrl: string | undefined;
+      // 4.5 참조 사진 조회 (referencePhotoIds가 있을 때)
+      let imageUrls: string[] = [];
 
-      if (referencePhotoId) {
-        const refPhoto = await db.query.aiReferencePhotos.findFirst({
-          where: eq(aiReferencePhotos.id, referencePhotoId),
-        });
+      if (referencePhotoIds.length > 0) {
+        const refPhotos = await db
+          .select({ id: aiReferencePhotos.id, originalUrl: aiReferencePhotos.originalUrl, userId: aiReferencePhotos.userId })
+          .from(aiReferencePhotos)
+          .where(inArray(aiReferencePhotos.id, referencePhotoIds));
 
-        if (!refPhoto || refPhoto.userId !== user.id) {
+        // 소유권 확인
+        const invalidPhotos = refPhotos.filter(p => p.userId !== user.id);
+        if (invalidPhotos.length > 0 || refPhotos.length !== referencePhotoIds.length) {
           await sendEvent('error', { error: 'Reference photo not found' });
           await writer.close();
           return;
         }
 
-        originalUrl = refPhoto.originalUrl;
+        imageUrls = refPhotos.map(p => p.originalUrl);
       }
 
       // generationId 미리 생성 (감사 추적 referenceId용)
       const generationId = createId();
 
-      // 5. 파일 검증 (referencePhotoId가 없을 때만)
-      if (!referencePhotoId) {
+      // 5. 파일 검증 (referencePhotoIds가 없을 때만)
+      if (referencePhotoIds.length === 0) {
         const uploadedImage = image!;
 
         if (!AI_CONFIG.ALLOWED_MIME_TYPES.includes(uploadedImage.type as any)) {
@@ -168,7 +171,7 @@ export async function POST(request: NextRequest) {
         await sendEvent('status', { message: '이미지 준비 중...' });
         try {
           const s3UploadResult = await uploadToS3(buffer, uploadedImage.type, `ai-originals/${user.id}`);
-          originalUrl = s3UploadResult.url;
+          imageUrls = [s3UploadResult.url];
         } catch (error) {
           if (creditsDeducted) {
             await refundCredits(user.id, 1, {
@@ -206,33 +209,19 @@ export async function POST(request: NextRequest) {
       await sendEvent('status', { message: 'AI 사진 생성 시작...', total: AI_CONFIG.BATCH_SIZE });
 
       const persistedUrls: string[] = [];
-      const selectedModel = findModelById(modelId || 'flux-pro');
-      const isReplicateProvider = selectedModel?.providerType === 'replicate';
+      const selectedModel = modelId ? findModelById(modelId) : undefined;
 
       try {
         const result = await generateWeddingPhotosStream(
-          originalUrl!,
-          styleData,
-          role as 'GROOM' | 'BRIDE',
+          imageUrls,
+          styleData as AIStyle,
+          role as 'GROOM' | 'BRIDE' | 'COUPLE',
           async (index, generatedUrl) => {
-            let finalUrl = generatedUrl;
-
-            // Replicate: CDN URL → S3 복사 필요
-            // OpenAI/Gemini: generate.ts에서 이미 S3 업로드 완료
-            if (isReplicateProvider) {
-              try {
-                const s3Result = await copyToS3(generatedUrl, `ai-generated/${user.id}`);
-                finalUrl = s3Result.url;
-              } catch {
-                // S3 복사 실패 시 원본 URL 사용
-              }
-            }
-
-            persistedUrls[index] = finalUrl;
+            persistedUrls[index] = generatedUrl;
 
             await sendEvent('image', {
               index,
-              url: finalUrl,
+              url: generatedUrl,
               progress: index + 1,
               total: AI_CONFIG.BATCH_SIZE,
             });
@@ -246,9 +235,9 @@ export async function POST(request: NextRequest) {
           .values({
             id: generationId,
             userId: user.id,
-            originalUrl: originalUrl!,
+            originalUrl: imageUrls[0],
             style: styleData,
-            role: role as 'GROOM' | 'BRIDE',
+            role: role as 'GROOM' | 'BRIDE' | 'COUPLE',
             generatedUrls: persistedUrls,
             modelId: selectedModel?.id ?? modelId ?? null,
             albumId: albumId || null,
@@ -256,14 +245,13 @@ export async function POST(request: NextRequest) {
             status: 'COMPLETED',
             creditsUsed: 1,
             cost: result.cost,
-            replicateId: isReplicateProvider ? result.providerJobId : null,
             providerJobId: result.providerJobId,
-            providerType: selectedModel?.providerType ?? 'replicate',
+            providerType: selectedModel?.providerType ?? 'gemini',
             completedAt: new Date(),
           })
           .returning();
 
-        // 11.5 Job 진행 상황 업데이트
+        // 11.5 Job 진행 상황 업데이트 + 자동 완료 체크
         let jobProgress: { completed: number; total: number } | undefined;
         if (jobId) {
           await db.update(aiGenerationJobs).set({
@@ -274,10 +262,28 @@ export async function POST(request: NextRequest) {
 
           const updatedJob = await db.query.aiGenerationJobs.findFirst({
             where: eq(aiGenerationJobs.id, jobId),
-            columns: { completedImages: true, totalImages: true },
+            columns: {
+              completedImages: true, failedImages: true, totalImages: true,
+              creditsReserved: true, creditsUsed: true, status: true, userId: true,
+            },
           });
           if (updatedJob) {
             jobProgress = { completed: updatedJob.completedImages, total: updatedJob.totalImages };
+
+            // 모든 이미지 처리 완료 → 서버 사이드 자동 완료
+            if (updatedJob.status === 'PROCESSING' &&
+                updatedJob.completedImages + updatedJob.failedImages >= updatedJob.totalImages) {
+              const finalStatus = updatedJob.completedImages === 0 ? 'FAILED'
+                                : updatedJob.failedImages === 0 ? 'COMPLETED' : 'PARTIAL';
+              const unusedCredits = updatedJob.creditsReserved - updatedJob.creditsUsed;
+              if (unusedCredits > 0 && updatedJob.userId) {
+                await releaseCredits(updatedJob.userId, unusedCredits, jobId);
+              }
+              await db.update(aiGenerationJobs).set({
+                status: finalStatus,
+                completedAt: new Date(),
+              }).where(eq(aiGenerationJobs.id, jobId));
+            }
           }
         }
 
@@ -296,7 +302,7 @@ export async function POST(request: NextRequest) {
 
         await sendEvent('done', {
           id: generation.id,
-          originalUrl,
+          originalUrl: imageUrls[0],
           generatedUrls: persistedUrls,
           style: styleData,
           albumId: albumId || null,
@@ -314,11 +320,32 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        // Job 실패 카운트 업데이트
+        // Job 실패 카운트 업데이트 + 자동 완료 체크
         if (jobId) {
           await db.update(aiGenerationJobs).set({
             failedImages: sql`${aiGenerationJobs.failedImages} + 1`,
           }).where(eq(aiGenerationJobs.id, jobId));
+
+          const failedJob = await db.query.aiGenerationJobs.findFirst({
+            where: eq(aiGenerationJobs.id, jobId),
+            columns: {
+              completedImages: true, failedImages: true, totalImages: true,
+              creditsReserved: true, creditsUsed: true, status: true, userId: true,
+            },
+          });
+          if (failedJob && failedJob.status === 'PROCESSING' &&
+              failedJob.completedImages + failedJob.failedImages >= failedJob.totalImages) {
+            const finalStatus = failedJob.completedImages === 0 ? 'FAILED'
+                              : failedJob.failedImages === 0 ? 'COMPLETED' : 'PARTIAL';
+            const unusedCredits = failedJob.creditsReserved - failedJob.creditsUsed;
+            if (unusedCredits > 0 && failedJob.userId) {
+              await releaseCredits(failedJob.userId, unusedCredits, jobId);
+            }
+            await db.update(aiGenerationJobs).set({
+              status: finalStatus,
+              completedAt: new Date(),
+            }).where(eq(aiGenerationJobs.id, jobId));
+          }
         }
 
         logger.error('AI generation failed', {
@@ -331,9 +358,9 @@ export async function POST(request: NextRequest) {
           await db.insert(aiGenerations).values({
             id: generationId,
             userId: user.id,
-            originalUrl: originalUrl!,
+            originalUrl: imageUrls[0] ?? '',
             style: styleData,
-            role: role as 'GROOM' | 'BRIDE',
+            role: role as 'GROOM' | 'BRIDE' | 'COUPLE',
             modelId: selectedModel?.id ?? modelId ?? null,
             albumId: albumId || null,
             jobId: jobId || null,

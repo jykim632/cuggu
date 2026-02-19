@@ -24,7 +24,7 @@ interface ReferencePhotoSectionProps {
 }
 
 const ROLES: PersonRole[] = ['GROOM', 'BRIDE'];
-const ROLE_LABELS: Record<PersonRole, string> = { GROOM: '신랑', BRIDE: '신부' };
+const ROLE_LABELS: Record<PersonRole, string> = { GROOM: '신랑', BRIDE: '신부', COUPLE: '커플' };
 
 export function ReferencePhotoSection({
   referencePhotos,

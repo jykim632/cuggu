@@ -83,7 +83,15 @@ export async function GET() {
     // 앨범별 완료된 generation 수를 단일 쿼리로 조회 (N+1 제거)
     const albumIds = albums.map((a) => a.id);
 
-    let generationsByAlbum: Record<string, typeof generations> = {};
+    type GenerationRow = {
+      id: string;
+      albumId: string | null;
+      style: string;
+      role: string | null;
+      generatedUrls: string[] | null;
+      createdAt: Date;
+    };
+    let generationsByAlbum: Record<string, GenerationRow[]> = {};
 
     if (albumIds.length > 0) {
       const generations = await db

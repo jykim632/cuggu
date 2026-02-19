@@ -3,12 +3,10 @@
  */
 
 import type { GenerationProvider, ProviderType } from './types';
-import { replicateProvider } from './replicate';
 import { openaiProvider } from './openai';
 import { geminiProvider } from './gemini';
 
 const providers: Record<ProviderType, GenerationProvider> = {
-  replicate: replicateProvider,
   openai: openaiProvider,
   gemini: geminiProvider,
 };

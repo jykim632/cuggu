@@ -15,9 +15,6 @@ const envSchema = z.object({
   AZURE_FACE_API_KEY: z.string().min(1, 'AZURE_FACE_API_KEY is required'),
   AZURE_FACE_ENDPOINT: z.string().url('AZURE_FACE_ENDPOINT must be a valid URL'),
 
-  // Replicate
-  REPLICATE_API_TOKEN: z.string().min(1, 'REPLICATE_API_TOKEN is required'),
-
   // OpenAI (optional - OpenAI 모델 활성화 시 필요)
   OPENAI_API_KEY: z.string().optional(),
 

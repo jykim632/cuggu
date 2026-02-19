@@ -144,7 +144,7 @@ export default function AlbumDetailPage() {
     try {
       const res = await fetch(`/api/ai/albums/${album.id}`, { method: 'DELETE' });
       if (res.ok) {
-        router.push('/dashboard/ai-photos');
+        router.push('/ai-photos');
       }
     } catch {
       // ignore
@@ -161,7 +161,7 @@ export default function AlbumDetailPage() {
       <div className="flex items-center justify-between gap-4">
         <div className="space-y-1">
           <button
-            onClick={() => router.push('/dashboard/ai-photos')}
+            onClick={() => router.push('/ai-photos')}
             className="flex items-center gap-1 text-sm text-stone-500 hover:text-stone-700 mb-1"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -220,7 +220,7 @@ export default function AlbumDetailPage() {
         <div className="flex flex-col items-center justify-center py-20 gap-3">
           <p className="text-sm text-stone-500">{error ?? '앨범을 찾을 수 없습니다'}</p>
           <button
-            onClick={() => router.push('/dashboard/ai-photos')}
+            onClick={() => router.push('/ai-photos')}
             className="text-sm text-rose-600 hover:text-rose-700"
           >
             앨범 리스트로 돌아가기
@@ -255,7 +255,7 @@ export default function AlbumDetailPage() {
             <Check className="w-4 h-4 text-green-400" />
             <span>{applyToast}</span>
             <a
-              href="/dashboard/invitations"
+              href="/invitations"
               className="flex items-center gap-1 text-rose-300 hover:text-rose-200"
             >
               에디터 열기 <ExternalLink className="w-3 h-3" />

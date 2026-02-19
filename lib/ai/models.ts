@@ -19,50 +19,7 @@ export interface AIModel {
 }
 
 export const AI_MODELS: Record<string, AIModel> = {
-  // ✅ 검증됨 - Replicate 공식 모델
-  FLUX_PRO: {
-    id: 'flux-pro',
-    name: 'Flux 1.1 Pro',
-    provider: 'Black Forest Labs',
-    providerType: 'replicate',
-    costPerImage: 0.04,
-    description: '최신 고품질, 얼굴 보존 약함',
-    facePreservation: 'fair',
-    speed: 'fast',
-    providerModel: 'black-forest-labs/flux-1.1-pro',
-    supportsMultipleOutputs: false,
-    supportsReferenceImage: true,
-  },
-  FLUX_DEV: {
-    id: 'flux-dev',
-    name: 'Flux Dev',
-    provider: 'Black Forest Labs',
-    providerType: 'replicate',
-    costPerImage: 0.025,
-    description: 'Flux 개발 버전, 저렴',
-    facePreservation: 'fair',
-    speed: 'fast',
-    providerModel: 'black-forest-labs/flux-dev',
-    supportsMultipleOutputs: false,
-    supportsReferenceImage: true,
-  },
-
-  // ✅ 검증됨 - 얼굴 보존 우수
-  PHOTOMAKER: {
-    id: 'photomaker',
-    name: 'PhotoMaker',
-    provider: 'Tencent ARC',
-    providerType: 'replicate',
-    costPerImage: 0.0095,
-    description: '얼굴 보존 우수, 인기 모델',
-    facePreservation: 'excellent',
-    speed: 'medium',
-    providerModel: 'tencentarc/photomaker',
-    supportsMultipleOutputs: false,
-    supportsReferenceImage: true,
-  },
-
-  // 🆕 OpenAI
+  // OpenAI
   GPT_IMAGE: {
     id: 'gpt-image-1',
     name: 'GPT Image 1',
@@ -90,7 +47,7 @@ export const AI_MODELS: Record<string, AIModel> = {
     supportsReferenceImage: false,
   },
 
-  // 🆕 Google (Gemini 네이티브 이미지 생성)
+  // Google (Gemini 네이티브 이미지 생성)
   GEMINI_FLASH_IMAGE: {
     id: 'gemini-flash-image',
     name: 'Gemini 2.5 Flash',
@@ -104,37 +61,9 @@ export const AI_MODELS: Record<string, AIModel> = {
     supportsMultipleOutputs: false,
     supportsReferenceImage: true,
   },
-
-  // 🧪 테스트 필요 - 404 발생 가능
-  // SDXL_FACEID: {
-  //   id: 'sdxl-faceid',
-  //   name: 'SDXL + IP-Adapter FaceID',
-  //   provider: 'lucataco',
-  //   providerType: 'replicate',
-  //   costPerImage: 0.005,
-  //   description: '얼굴 ID 보존, 가장 저렴',
-  //   facePreservation: 'excellent',
-  //   speed: 'medium',
-  //   providerModel: 'lucataco/ip-adapter-faceid',
-  //   supportsMultipleOutputs: false,
-  //   supportsReferenceImage: true,
-  // },
-  // INSTANT_ID: {
-  //   id: 'instant-id',
-  //   name: 'InstantID',
-  //   provider: 'zsxkib',
-  //   providerType: 'replicate',
-  //   costPerImage: 0.0095,
-  //   description: '즉각적인 얼굴 ID 전환',
-  //   facePreservation: 'excellent',
-  //   speed: 'fast',
-  //   providerModel: 'zsxkib/instant-id',
-  //   supportsMultipleOutputs: false,
-  //   supportsReferenceImage: true,
-  // },
 };
 
-export const DEFAULT_MODEL = 'flux-pro'; // 모델 ID (소문자)
+export const DEFAULT_MODEL = 'gemini-flash-image';
 
 /**
  * 모델 ID로 AIModel 찾기

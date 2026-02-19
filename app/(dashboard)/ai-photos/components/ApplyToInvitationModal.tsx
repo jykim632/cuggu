@@ -122,7 +122,7 @@ export function ApplyToInvitationModal({
               <p className="text-sm font-medium text-stone-700">청첩장이 없습니다</p>
               <p className="text-xs text-stone-500 mt-1">먼저 청첩장을 만들어주세요</p>
               <a
-                href="/dashboard/invitations"
+                href="/invitations"
                 className="inline-flex items-center gap-1 mt-3 text-xs text-rose-600 hover:text-rose-700"
               >
                 청첩장 만들기 <ExternalLink className="w-3 h-3" />

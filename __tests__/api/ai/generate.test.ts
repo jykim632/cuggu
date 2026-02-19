@@ -41,6 +41,12 @@ vi.mock('@/lib/ai/s3', () => ({
   uploadToS3: vi.fn(),
 }));
 
+vi.mock('@/lib/ai/credits', () => ({
+  checkCreditsFromUser: vi.fn(),
+  deductCredits: vi.fn(),
+  refundCredits: vi.fn(),
+}));
+
 vi.mock('@/lib/ai/generate', () => ({
   generateWeddingPhotos: vi.fn(),
   modelSupportsReferenceImage: vi.fn().mockReturnValue(true),
@@ -48,8 +54,8 @@ vi.mock('@/lib/ai/generate', () => ({
 
 vi.mock('@/lib/ai/models', () => ({
   findModelById: vi.fn().mockReturnValue({
-    id: 'flux-pro',
-    providerType: 'replicate',
+    id: 'gemini-flash-image',
+    providerType: 'gemini',
     supportsReferenceImage: true,
   }),
 }));
@@ -59,6 +65,7 @@ import { db } from '@/db';
 import { rateLimit } from '@/lib/ai/rate-limit';
 import { detectFace } from '@/lib/ai/face-detection';
 import { uploadToS3 } from '@/lib/ai/s3';
+import { checkCreditsFromUser, deductCredits, refundCredits } from '@/lib/ai/credits';
 import { generateWeddingPhotos } from '@/lib/ai/generate';
 
 describe('POST /api/ai/generate', () => {
@@ -70,12 +77,14 @@ describe('POST /api/ai/generate', () => {
 
   const createMockRequest = (
     imageBuffer: Buffer,
-    style: string = 'CLASSIC'
+    style: string = 'CLASSIC',
+    role: string = 'GROOM',
   ): NextRequest => {
     const formData = new FormData();
     const blob = new Blob([imageBuffer], { type: 'image/jpeg' });
     formData.append('image', blob, 'test.jpg');
     formData.append('style', style);
+    formData.append('role', role);
 
     return new NextRequest('http://localhost:3000/api/ai/generate', {
       method: 'POST',
@@ -109,6 +118,13 @@ describe('POST /api/ai/generate', () => {
       faceCount: 1,
     });
 
+    vi.mocked(checkCreditsFromUser).mockReturnValue({
+      hasCredits: true,
+      balance: 5,
+    } as any);
+    vi.mocked(deductCredits).mockResolvedValue(4);
+    vi.mocked(refundCredits).mockResolvedValue(5);
+
     vi.mocked(uploadToS3).mockResolvedValue({
       key: 'ai-originals/test.jpg',
       url: 'https://s3.amazonaws.com/bucket/image.jpg',
@@ -116,25 +132,16 @@ describe('POST /api/ai/generate', () => {
 
     vi.mocked(generateWeddingPhotos).mockResolvedValue({
       urls: [
-        'https://replicate.com/output1.png',
-        'https://replicate.com/output2.png',
-        'https://replicate.com/output3.png',
-        'https://replicate.com/output4.png',
+        'https://cdn.example.com/output1.png',
+        'https://cdn.example.com/output2.png',
+        'https://cdn.example.com/output3.png',
+        'https://cdn.example.com/output4.png',
       ],
-      providerJobId: 'pred-abc123',
-      cost: 0.16,
+      providerJobId: 'gemini-abc123',
+      cost: 0.08,
     });
 
-    vi.mocked(db.update).mockReturnValue({
-      set: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          returning: vi.fn().mockResolvedValue([{ aiCredits: 4 }]),
-        }),
-      }),
-    } as any);
-
     // DB insert mock - capture and return style parameter dynamically
-    const insertMock = vi.fn();
     vi.mocked(db.insert).mockReturnValue({
       values: vi.fn((data: any) => ({
         returning: vi.fn().mockResolvedValue([
@@ -142,10 +149,10 @@ describe('POST /api/ai/generate', () => {
             id: 'gen-123',
             originalUrl: 'https://s3.amazonaws.com/bucket/image.jpg',
             generatedUrls: [
-              'https://replicate.com/output1.png',
-              'https://replicate.com/output2.png',
-              'https://replicate.com/output3.png',
-              'https://replicate.com/output4.png',
+              'https://cdn.example.com/output1.png',
+              'https://cdn.example.com/output2.png',
+              'https://cdn.example.com/output3.png',
+              'https://cdn.example.com/output4.png',
             ],
             style: data.style, // Use actual style from request
           },
@@ -169,19 +176,21 @@ describe('POST /api/ai/generate', () => {
       expect(data.data.remainingCredits).toBe(4); // 5 - 1
 
       // 크레딧 차감 확인
-      expect(db.update).toHaveBeenCalled();
+      expect(deductCredits).toHaveBeenCalled();
 
       // S3 업로드 확인
       expect(uploadToS3).toHaveBeenCalledWith(
         expect.any(Buffer),
         'image/jpeg',
-        'ai-originals'
+        `ai-originals/${mockUser.id}`
       );
 
-      // Replicate API 호출 확인
+      // AI 생성 호출 확인 (imageUrls 배열, style, role, modelId)
       expect(generateWeddingPhotos).toHaveBeenCalledWith(
-        'https://s3.amazonaws.com/bucket/image.jpg',
-        'CLASSIC'
+        ['https://s3.amazonaws.com/bucket/image.jpg'],
+        'CLASSIC',
+        'GROOM',
+        undefined,
       );
 
       // DB 저장 확인
@@ -198,8 +207,10 @@ describe('POST /api/ai/generate', () => {
       expect(response.status).toBe(200);
       expect(data.data.style).toBe('MODERN');
       expect(generateWeddingPhotos).toHaveBeenCalledWith(
-        expect.any(String),
-        'MODERN'
+        expect.any(Array),
+        'MODERN',
+        'GROOM',
+        undefined,
       );
     });
   });
@@ -262,6 +273,7 @@ describe('POST /api/ai/generate', () => {
     it('실패: 이미지 없음', async () => {
       const formData = new FormData();
       formData.append('style', 'CLASSIC');
+      formData.append('role', 'GROOM');
 
       const request = new NextRequest(
         'http://localhost:3000/api/ai/generate',
@@ -275,7 +287,7 @@ describe('POST /api/ai/generate', () => {
       const data = await response.json();
 
       expect(response.status).toBe(400);
-      expect(data.error).toContain('Image and style are required');
+      expect(data.error).toContain('required');
     });
 
     it('실패: PNG 파일 시그니처 검증 실패', async () => {
@@ -296,9 +308,9 @@ describe('POST /api/ai/generate', () => {
 
   describe('Credits', () => {
     it('실패: 크레딧 부족', async () => {
-      vi.mocked(db.query.users.findFirst).mockResolvedValue({
-        ...mockUser,
-        aiCredits: 0,
+      vi.mocked(checkCreditsFromUser).mockReturnValue({
+        hasCredits: false,
+        balance: 0,
       } as any);
 
       const imageBuffer = createJPEGBuffer();
@@ -313,14 +325,8 @@ describe('POST /api/ai/generate', () => {
     });
 
     it('실패: 크레딧 차감 Race condition', async () => {
-      // 크레딧 차감 실패 (조건부 UPDATE가 빈 배열 반환)
-      vi.mocked(db.update).mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([]), // Empty result
-          }),
-        }),
-      } as any);
+      // 크레딧 차감 실패
+      vi.mocked(deductCredits).mockRejectedValue(new Error('Insufficient credits'));
 
       const imageBuffer = createJPEGBuffer();
       const request = createMockRequest(imageBuffer);
@@ -380,8 +386,8 @@ describe('POST /api/ai/generate', () => {
       expect(response.status).toBe(500);
       expect(data.error).toContain('S3 업로드 실패');
 
-      // 크레딧 환불 확인 (UPDATE가 2번 호출됨: 차감 + 환불)
-      expect(db.update).toHaveBeenCalledTimes(2);
+      // 크레딧 환불 확인
+      expect(refundCredits).toHaveBeenCalled();
 
       // 실패 이력 저장 확인
       expect(db.insert).toHaveBeenCalled();
@@ -391,7 +397,7 @@ describe('POST /api/ai/generate', () => {
   describe('AI Generation', () => {
     it('실패: AI 생성 실패 시 크레딧 환불', async () => {
       vi.mocked(generateWeddingPhotos).mockRejectedValue(
-        new Error('Replicate API failed')
+        new Error('AI generation failed')
       );
 
       const imageBuffer = createJPEGBuffer();
@@ -404,7 +410,7 @@ describe('POST /api/ai/generate', () => {
       expect(data.error).toContain('AI 생성 중 오류가 발생했습니다');
 
       // 크레딧 환불 확인
-      expect(db.update).toHaveBeenCalledTimes(2);
+      expect(refundCredits).toHaveBeenCalled();
 
       // 실패 이력 저장 확인
       expect(db.insert).toHaveBeenCalled();

@@ -127,41 +127,6 @@ export const AICreditsResponseSchema = z.object({
 export type AICreditsResponse = z.infer<typeof AICreditsResponseSchema>;
 
 // ============================================================
-// Replicate API Schemas
-// ============================================================
-
-// Replicate API 요청
-export const ReplicateAPIRequestSchema = z.object({
-  version: z.string(),
-  input: z.object({
-    image: z.url(), // Base64 or URL
-    prompt: z.string(),
-    negative_prompt: z.string().optional(),
-    num_outputs: z.number().int().min(1).max(4).default(4),
-    guidance_scale: z.number().min(1).max(20).default(7.5),
-    num_inference_steps: z.number().int().min(1).max(50).default(25),
-  }),
-});
-
-export type ReplicateAPIRequest = z.infer<typeof ReplicateAPIRequestSchema>;
-
-// Replicate API 응답
-export const ReplicateAPIResponseSchema = z.object({
-  id: z.string(),
-  status: z.enum(['starting', 'processing', 'succeeded', 'failed', 'canceled']),
-  output: z.array(z.url()).nullable(),
-  error: z.string().nullable(),
-  logs: z.string().optional(),
-  metrics: z
-    .object({
-      predict_time: z.number().optional(),
-    })
-    .optional(),
-});
-
-export type ReplicateAPIResponse = z.infer<typeof ReplicateAPIResponseSchema>;
-
-// ============================================================
 // Validation Helpers
 // ============================================================
 
@@ -219,7 +184,7 @@ export const AlbumImageSchema = z.object({
   url: z.url(),
   generationId: z.string(),
   style: z.string(),
-  role: z.enum(['GROOM', 'BRIDE']),
+  role: z.enum(['GROOM', 'BRIDE', 'COUPLE']),
   sortOrder: z.number().int().min(0),
   groupId: z.string().optional(),
   tags: z.array(z.string().max(30)).max(10).optional(),
@@ -278,8 +243,8 @@ export type CreateJobRequest = z.infer<typeof CreateJobSchema>;
 export const JobTaskSchema = z.object({
   index: z.number().int().min(0),
   style: z.string(),
-  role: z.enum(['GROOM', 'BRIDE']),
-  referencePhotoId: z.string(),
+  role: z.enum(['GROOM', 'BRIDE', 'COUPLE']),
+  referencePhotoIds: z.array(z.string()).min(1),
 });
 
 export const JobResponseSchema = z.object({

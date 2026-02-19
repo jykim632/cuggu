@@ -11,6 +11,11 @@ interface CreditConfirmStepProps {
   credits: number;
 }
 
+const ROLE_LABELS: Record<string, string> = {
+  GROOM: '신랑',
+  BRIDE: '신부',
+};
+
 export function CreditConfirmStep({
   mode,
   styles,
@@ -21,6 +26,11 @@ export function CreditConfirmStep({
   const creditsNeeded = totalImages;
   const remaining = credits - creditsNeeded;
   const isInsufficient = remaining < 0;
+
+  const isCouple = roles.length > 1;
+  const roleText = isCouple
+    ? '커플 (신랑+신부)'
+    : roles.map(r => ROLE_LABELS[r] ?? r).join(', ');
 
   return (
     <div className="space-y-5">
@@ -48,9 +58,7 @@ export function CreditConfirmStep({
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-stone-500">역할</span>
-          <span className="font-medium text-stone-900">
-            {roles.map(r => r === 'GROOM' ? '신랑' : '신부').join(', ')}
-          </span>
+          <span className="font-medium text-stone-900">{roleText}</span>
         </div>
       </div>
 

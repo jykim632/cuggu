@@ -40,10 +40,12 @@ export function GenerationWizard({
 }: GenerationWizardProps) {
   const [step, setStep] = useState<WizardStep>('mode');
   const [direction, setDirection] = useState(1);
+  const roles = referencePhotos.map(p => p.role as PersonRole);
+
   const [config, setConfig] = useState<Partial<WizardConfig>>({
     mode: undefined,
     styles: [],
-    roles: referencePhotos.map(p => p.role as PersonRole),
+    roles,
     totalImages: 0,
   });
 
@@ -67,13 +69,16 @@ export function GenerationWizard({
 
   const handleConfirm = () => {
     if (config.mode && config.styles?.length && computedTotal > 0) {
-      onGenerate({ ...config, totalImages: computedTotal } as WizardConfig);
+      onGenerate({
+        ...config,
+        totalImages: computedTotal,
+      } as WizardConfig);
     }
   };
 
-  // Compute total images for SINGLE mode based on styles x roles
+  // SINGLE: 스타일 개수 = 사진 수, BATCH: totalImages
   const computedTotal = config.mode === 'SINGLE'
-    ? (config.styles?.length ?? 0) * (config.roles?.length ?? 0)
+    ? (config.styles?.length ?? 0)
     : config.totalImages ?? 0;
 
   const slideVariants = {
