@@ -43,8 +43,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# beads
-.beads/
+# beads (내부 .gitignore가 db/daemon 등 관리)
+# issues.jsonl, config.yaml, README.md 등은 git 추적 필요
 
 # playwright
 .playwright-mcp/
