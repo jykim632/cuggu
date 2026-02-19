@@ -5,14 +5,12 @@ import {
   Sparkles,
   Camera,
   ChevronDown,
-  ChevronUp,
   ChevronRight,
   Pencil,
   Check,
   X,
   Loader2,
   FolderPlus,
-  Tag,
   Images,
 } from 'lucide-react';
 import { createId } from '@paralleldrive/cuid2';
@@ -20,11 +18,10 @@ import { AIStyle, PersonRole, SnapType, SNAP_TYPES, AlbumImage, AlbumGroup, Refe
 import { AlbumCuration } from './AlbumCuration';
 import { GeneratedPhotosDrawer } from './GeneratedPhotosDrawer';
 import { GenerationCard } from './GenerationCard';
-import { GenerationWizard, WizardConfig } from './GenerationWizard';
-import { BatchGenerationView } from './BatchGenerationView';
+import { type WizardConfig } from './GenerationWizard';
 import { GenerationFloatingBar } from './GenerationFloatingBar';
 import { ReferencePhotoSection } from './ReferencePhotoSection';
-import { CreditDisplay } from './CreditDisplay';
+import { AIGenerationModal } from './AIGenerationModal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/hooks/useConfirm';
@@ -73,7 +70,6 @@ export function AlbumDashboard({
   const [nameInput, setNameInput] = useState(album.name);
   const [curatedImages, setCuratedImages] = useState<AlbumImage[]>(album.images ?? []);
   const [groups, setGroups] = useState<AlbumGroup[]>(album.groups ?? []);
-  const [showLegacy, setShowLegacy] = useState(false);
   const [legacyGenerations, setLegacyGenerations] = useState<Generation[]>([]);
   const [legacyLoading, setLegacyLoading] = useState(false);
   const [savingCuration, setSavingCuration] = useState<'idle' | 'saving' | 'done'>('idle');
@@ -96,10 +92,34 @@ export function AlbumDashboard({
   const [showWizard, setShowWizard] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
 
+  // AI 생성 모달
+  const [showAiModal, setShowAiModal] = useState(false);
+
   // Drawer
   const [showDrawer, setShowDrawer] = useState(false);
 
+  // Tool section open states
+  const [refSectionOpen, setRefSectionOpen] = useState(false);
+  const [legacySectionOpen, setLegacySectionOpen] = useState(false);
+
+  // Scroll refs
+  const refSectionRef = useRef<HTMLDivElement>(null);
+
   const snapType = album.snapType as SnapType | null;
+
+  // ── Derived values ──
+  const hasRefPhotos = referencePhotos.length > 0;
+  const curatedCount = curatedImages.length;
+  const totalGenerated = album.generations.reduce(
+    (sum, g) => sum + (g.generatedUrls?.length ?? 0),
+    0
+  );
+  const isEmpty = curatedCount === 0;
+  const hasGenerations = totalGenerated > 0;
+  const snapTypeInfo = SNAP_TYPES.find((t) => t.value === snapType);
+  const allTags = Array.from(
+    new Set(curatedImages.flatMap((img) => img.tags ?? []))
+  );
 
   // ── useAIGeneration hook ──
   const generation = useAIGeneration({
@@ -108,6 +128,20 @@ export function AlbumDashboard({
     onCreditsChange,
     onComplete: onRefreshAlbum,
   });
+
+  // ── AI 생성 모달 열기 ──
+  const handleOpenAiModal = useCallback(() => {
+    if (!hasRefPhotos) {
+      setRefSectionOpen(true);
+      setTimeout(() => {
+        refSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+      showToast('먼저 참조 사진을 등록하세요', 'info');
+      return;
+    }
+    setShowAiModal(true);
+    setIsMinimized(false);
+  }, [hasRefPhotos, showToast]);
 
   // ── 생성 완료 시 toast 피드백 ──
   const wasGeneratingRef = useRef(false);
@@ -138,7 +172,6 @@ export function AlbumDashboard({
   }, [generation.state.isGenerating, generation.state.error, generation.state.jobResult, generation.state.completedUrls, showToast]);
 
   // ── 생성 완료 시 자동 큐레이션 ──
-  // 생성 중 completedUrls를 추적하고, album 갱신 시 자동으로 큐레이션에 추가
   const autoAddUrlsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -165,6 +198,14 @@ export function AlbumDashboard({
     };
     fetchRefPhotos();
   }, []);
+
+  // ── 참조 사진 로드 완료 시 도구 섹션 초기 상태 ──
+  useEffect(() => {
+    if (refPhotosLoading) return;
+    const empty = (album.images ?? []).length === 0;
+    const hasRef = referencePhotos.length > 0;
+    setRefSectionOpen(!hasRef && empty);
+  }, [refPhotosLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync album data when album prop changes
   useEffect(() => {
@@ -385,7 +426,7 @@ export function AlbumDashboard({
   // ── Wizard 생성 콜백 ──
   const handleWizardGenerate = useCallback(async (config: WizardConfig) => {
     setShowWizard(false);
-    setIsMinimized(false);
+    generation.prepare(config.totalImages);
 
     try {
       const res = await fetch('/api/ai/jobs', {
@@ -411,15 +452,13 @@ export function AlbumDashboard({
       generation.generateBatch(data.jobId, data.tasks);
     } catch (err) {
       console.error('Job creation failed:', err);
+      generation.reset();
     }
   }, [album.id, selectedModel, referencePhotos, generation]);
 
   // ── 레거시 기록 로드 ──
   const loadLegacy = async () => {
-    if (legacyGenerations.length > 0) {
-      setShowLegacy(!showLegacy);
-      return;
-    }
+    if (legacyGenerations.length > 0) return;
     setLegacyLoading(true);
     try {
       const res = await fetch('/api/ai/generations?noAlbum=true&limit=50');
@@ -431,7 +470,6 @@ export function AlbumDashboard({
       // 실패 시 무시
     } finally {
       setLegacyLoading(false);
-      setShowLegacy(true);
     }
   };
 
@@ -453,23 +491,9 @@ export function AlbumDashboard({
     }
   };
 
-  const snapTypeInfo = SNAP_TYPES.find((t) => t.value === snapType);
-  const curatedCount = curatedImages.length;
-  const totalGenerated = album.generations.reduce(
-    (sum, g) => sum + (g.generatedUrls?.length ?? 0),
-    0
-  );
-
-  // 태그 모음 (필터용)
-  const allTags = Array.from(
-    new Set(curatedImages.flatMap((img) => img.tags ?? []))
-  );
-
-  const hasRefPhotos = referencePhotos.length > 0;
-
   return (
-    <div className="space-y-8">
-      {/* ── 앨범 헤더 ── */}
+    <div className="space-y-6">
+      {/* ── 1. 앨범 헤더 ── */}
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2">
           {/* 앨범 이름 */}
@@ -515,9 +539,8 @@ export function AlbumDashboard({
                 {snapTypeInfo.label}
               </span>
             )}
-            <span>{totalGenerated}장 생성</span>
-            <span>{curatedCount}장 선택</span>
-            {groups.length > 0 && <span>{groups.length}개 그룹</span>}
+            {hasGenerations && <span>{totalGenerated}장 생성</span>}
+            {curatedCount > 0 && <span>{curatedCount}장 선택</span>}
             {savingCuration === 'saving' && (
               <span className="text-rose-500 flex items-center gap-1">
                 <Loader2 className="w-3 h-3 animate-spin" /> {saveAction} 중...
@@ -531,129 +554,91 @@ export function AlbumDashboard({
           </div>
         </div>
 
-        {/* 적용 버튼 */}
-        {curatedCount > 0 && (
+        {/* CTA 버튼들 */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* AI 사진 생성 — 항상 노출 */}
           <button
-            onClick={onShowApplyModal}
-            className="flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-rose-700"
+            onClick={handleOpenAiModal}
+            className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-sm font-medium text-white hover:bg-violet-700 transition-colors"
           >
             <Sparkles className="w-4 h-4" />
-            청첩장에 적용
+            AI 사진 생성
           </button>
-        )}
-      </div>
 
-      {/* ── 참조 사진 + 촬영 설정 ── */}
-      <div className="space-y-4">
-        {refPhotosLoading ? (
-          <div className="flex items-center justify-center py-8 gap-2 text-stone-400">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="text-sm">참조 사진 확인 중...</span>
-          </div>
-        ) : (
-          <ReferencePhotoSection
-            referencePhotos={referencePhotos}
-            onPhotosChange={setReferencePhotos}
-            compact={hasRefPhotos}
-          />
-        )}
-
-        {hasRefPhotos && (() => {
-          const hasBatchView = (generation.state.isGenerating || generation.state.completedUrls.length > 0) && !isMinimized;
-
-          return (
-            <>
-              {hasBatchView && (
-                <BatchGenerationView
-                  totalImages={generation.state.totalImages}
-                  completedUrls={generation.state.completedUrls}
-                  currentIndex={generation.state.currentIndex}
-                  statusMessage={generation.state.statusMessage}
-                  error={generation.state.error}
-                  isGenerating={generation.state.isGenerating}
-                  jobResult={generation.state.jobResult}
-                  onMinimize={() => setIsMinimized(true)}
-                  onCancel={generation.cancel}
-                  onDismiss={generation.reset}
-                />
-              )}
-
-              {!hasBatchView && (
-                !showWizard ? (
-                  <div className="flex flex-col items-center gap-3 rounded-xl border border-stone-200 bg-stone-50 py-8 px-6">
-                    <CreditDisplay balance={credits} />
-                    <p className="text-xs text-stone-500">
-                      참조 사진 {referencePhotos.length}장 등록됨 ({referencePhotos.map((p) => p.role === 'GROOM' ? '신랑' : '신부').join(', ')})
-                    </p>
-                    <button
-                      onClick={() => setShowWizard(true)}
-                      disabled={generation.state.isGenerating}
-                      className="flex items-center gap-2 rounded-lg bg-rose-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-rose-700 disabled:bg-stone-300"
-                    >
-                      <Sparkles className="w-4 h-4" />
-                      촬영 설정
-                    </button>
-                  </div>
-                ) : (
-                  <GenerationWizard
-                    credits={credits}
-                    referencePhotos={referencePhotos.map((p) => ({ id: p.id, role: p.role }))}
-                    snapType={snapType}
-                    onGenerate={handleWizardGenerate}
-                    onCancel={() => setShowWizard(false)}
-                    disabled={generation.state.isGenerating}
-                  />
-                )
-              )}
-            </>
-          );
-        })()}
-      </div>
-
-      {/* ── 그룹 관리 ── */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-stone-800">그룹</h3>
-          {!showGroupInput && (
-            <button
-              onClick={() => setShowGroupInput(true)}
-              className="flex items-center gap-1 text-xs text-stone-500 hover:text-rose-600 transition-colors"
-            >
-              <FolderPlus className="w-3.5 h-3.5" />
-              그룹 추가
-            </button>
+          {/* 청첩장에 적용 — 큐레이션 있을 때만 */}
+          {curatedCount > 0 && (
+            <div className="group/apply relative">
+              <button
+                onClick={onShowApplyModal}
+                className="flex items-center gap-2 rounded-lg bg-rose-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-rose-700"
+              >
+                청첩장에 적용
+              </button>
+              <div className="pointer-events-none absolute right-0 top-full z-10 mt-1.5 whitespace-nowrap rounded-lg bg-stone-800 px-2.5 py-1.5 text-[11px] text-stone-200 opacity-0 transition-opacity group-hover/apply:opacity-100">
+                선택한 {curatedCount}장을 갤러리에 추가
+              </div>
+            </div>
           )}
         </div>
+      </div>
 
-        {showGroupInput && (
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={newGroupName}
-              onChange={(e) => setNewGroupName(e.target.value)}
-              placeholder="그룹 이름 (예: 스튜디오 베스트)"
-              className="flex-1 rounded-lg border border-stone-200 px-3 py-1.5 text-sm text-stone-700 focus:border-rose-400 focus:outline-none"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleAddGroup();
-                if (e.key === 'Escape') { setShowGroupInput(false); setNewGroupName(''); }
-              }}
-            />
-            <button onClick={handleAddGroup} disabled={!newGroupName.trim()} className="text-rose-500 hover:text-rose-600 disabled:text-stone-300">
-              <Check className="w-4 h-4" />
-            </button>
-            <button onClick={() => { setShowGroupInput(false); setNewGroupName(''); }} className="text-stone-400 hover:text-stone-600">
-              <X className="w-4 h-4" />
-            </button>
+      {/* ── 2. 빈 앨범 가이드 ── */}
+      {isEmpty && !hasGenerations && (
+        <div className="rounded-xl border border-dashed border-stone-300 bg-stone-50 px-6 py-8 text-center">
+          <Camera className="mx-auto mb-3 w-10 h-10 text-stone-300" />
+          <p className="text-base font-medium text-stone-700 mb-1">앨범이 비어있어요</p>
+          <p className="text-sm text-stone-500 mb-5">AI로 웨딩 사진을 생성해보세요</p>
+          <div className="mx-auto max-w-xs space-y-2 text-left text-sm text-stone-600">
+            <div className="flex items-center gap-2">
+              {hasRefPhotos ? (
+                <Check className="w-4 h-4 text-green-500 shrink-0" />
+              ) : (
+                <div className="w-4 h-4 rounded-full border-2 border-stone-300 shrink-0" />
+              )}
+              <span className={hasRefPhotos ? 'text-stone-400 line-through' : ''}>참조 사진 등록</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full border-2 border-stone-300 shrink-0" />
+              <span>AI 촬영으로 사진 생성</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full border-2 border-stone-300 shrink-0" />
+              <span>마음에 드는 사진을 앨범에 추가</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full border-2 border-stone-300 shrink-0" />
+              <span>청첩장에 적용</span>
+            </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {groups.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+      {isEmpty && hasGenerations && (
+        <div className="rounded-xl border border-stone-200 bg-stone-50 px-6 py-6 text-center">
+          <p className="text-sm font-medium text-stone-700 mb-1">
+            {totalGenerated}장의 사진이 생성되었습니다
+          </p>
+          <p className="text-sm text-stone-500 mb-3">마음에 드는 사진을 앨범에 추가하세요</p>
+          <button
+            onClick={() => setShowDrawer(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-800 transition-colors"
+          >
+            생성된 사진 보기
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* ── 3. 필터 바 (그룹+태그 통합, 사진 있을 때만) ── */}
+      {!isEmpty && (groups.length > 0 || allTags.length > 0) && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1">
             <button
-              onClick={() => setActiveGroupFilter(null)}
-              className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
-                activeGroupFilter === null ? 'bg-rose-100 text-rose-700' : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
+              onClick={() => { setActiveGroupFilter(null); setActiveTagFilter(null); }}
+              className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                activeGroupFilter === null && activeTagFilter === null
+                  ? 'bg-rose-100 text-rose-700'
+                  : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
               }`}
             >
               전체
@@ -663,61 +648,78 @@ export function AlbumDashboard({
                 key={g.id}
                 group={g}
                 isActive={activeGroupFilter === g.id}
-                onSelect={(id) => setActiveGroupFilter(activeGroupFilter === id ? null : id)}
+                onSelect={(id) => { setActiveGroupFilter(activeGroupFilter === id ? null : id); setActiveTagFilter(null); }}
                 onRename={handleRenameGroup}
                 onDelete={handleDeleteGroup}
               />
             ))}
-          </div>
-        )}
-      </div>
-
-      {/* ── 태그 필터 ── */}
-      {allTags.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Tag className="w-3.5 h-3.5 text-stone-400" />
-            <span className="text-xs font-medium text-stone-500">태그 필터</span>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
             <button
-              onClick={() => setActiveTagFilter(null)}
-              className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
-                activeTagFilter === null ? 'bg-rose-100 text-rose-700' : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
-              }`}
+              onClick={() => setShowGroupInput(true)}
+              className="shrink-0 flex items-center gap-1 rounded-full bg-stone-100 px-2 py-1 text-xs text-stone-400 hover:bg-stone-200 hover:text-stone-600 transition-colors"
             >
-              전체
+              <FolderPlus className="w-3 h-3" />
             </button>
-            {allTags.map((tag) => (
-              <button
-                key={tag}
-                onClick={() => setActiveTagFilter(activeTagFilter === tag ? null : tag)}
-                className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
-                  activeTagFilter === tag ? 'bg-rose-100 text-rose-700' : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
-                }`}
-              >
-                {tag}
-              </button>
-            ))}
+            {allTags.length > 0 && (
+              <>
+                <div className="w-px h-4 bg-stone-200 shrink-0" />
+                {allTags.map((tag) => (
+                  <button
+                    key={tag}
+                    onClick={() => { setActiveTagFilter(activeTagFilter === tag ? null : tag); setActiveGroupFilter(null); }}
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                      activeTagFilter === tag ? 'bg-rose-100 text-rose-700' : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
+                    }`}
+                  >
+                    #{tag}
+                  </button>
+                ))}
+              </>
+            )}
           </div>
+
+          {showGroupInput && (
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+                placeholder="그룹 이름 (예: 스튜디오 베스트)"
+                className="flex-1 rounded-lg border border-stone-200 px-3 py-1.5 text-sm text-stone-700 focus:border-rose-400 focus:outline-none"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleAddGroup();
+                  if (e.key === 'Escape') { setShowGroupInput(false); setNewGroupName(''); }
+                }}
+              />
+              <button onClick={handleAddGroup} disabled={!newGroupName.trim()} className="text-rose-500 hover:text-rose-600 disabled:text-stone-300">
+                <Check className="w-4 h-4" />
+              </button>
+              <button onClick={() => { setShowGroupInput(false); setNewGroupName(''); }} className="text-stone-400 hover:text-stone-600">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       )}
 
-      {/* ── 큐레이션 섹션 ── */}
-      <AlbumCuration
-        images={curatedImages}
-        groups={groups}
-        activeGroupFilter={activeGroupFilter}
-        activeTagFilter={activeTagFilter}
-        tagEditingUrl={tagEditingUrl}
-        onTagEditRequest={setTagEditingUrl}
-        onToggleTag={handleToggleTag}
-        onAddCustomTag={handleAddCustomTag}
-        onImagesChange={handleCurationChange}
-      />
+      {/* ── 4. 큐레이션 갤러리 (사진 있을 때만) ── */}
+      {!isEmpty && (
+        <AlbumCuration
+          images={curatedImages}
+          groups={groups}
+          activeGroupFilter={activeGroupFilter}
+          activeTagFilter={activeTagFilter}
+          tagEditingUrl={tagEditingUrl}
+          onTagEditRequest={setTagEditingUrl}
+          onToggleTag={handleToggleTag}
+          onAddCustomTag={handleAddCustomTag}
+          onImagesChange={handleCurationChange}
+          onConfirm={confirm}
+        />
+      )}
 
-      {/* ── 생성된 사진 Drawer 트리거 ── */}
-      {totalGenerated > 0 && (
+      {/* ── 5. Drawer 트리거 ── */}
+      {hasGenerations && (
         <button
           onClick={() => setShowDrawer(true)}
           className="flex w-full items-center justify-between rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 transition-colors hover:bg-stone-100"
@@ -732,7 +734,6 @@ export function AlbumDashboard({
         </button>
       )}
 
-      {/* Drawer */}
       <GeneratedPhotosDrawer
         isOpen={showDrawer}
         onClose={() => setShowDrawer(false)}
@@ -742,34 +743,69 @@ export function AlbumDashboard({
         onAddMultipleToAlbum={handleAddMultipleToAlbum}
       />
 
-      {/* ── 생성 중 최소화 바 ── */}
-      {generation.state.isGenerating && isMinimized && (
-        <GenerationFloatingBar
-          completedCount={generation.state.completedUrls.length}
-          totalImages={generation.state.totalImages}
-          onExpand={() => setIsMinimized(false)}
-        />
-      )}
-
-      {/* ── 레거시 섹션 ── */}
+      {/* ── 6. 도구 영역 (접이식 아코디언) ── */}
       <div className="space-y-3">
-        <button
-          onClick={loadLegacy}
-          disabled={legacyLoading}
-          className="flex items-center gap-2 text-xs text-stone-400 hover:text-stone-600 transition-colors"
+        <h4 className="text-xs font-medium text-stone-400 uppercase tracking-wider">도구</h4>
+
+        {/* 참조 사진 */}
+        <div ref={refSectionRef}>
+          <ToolSection
+            title="참조 사진"
+            open={refSectionOpen}
+            onToggle={() => setRefSectionOpen(!refSectionOpen)}
+            summary={
+              refPhotosLoading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-stone-400" />
+              ) : hasRefPhotos ? (
+                <div className="flex items-center gap-2">
+                  {referencePhotos.map((p) => (
+                    <img
+                      key={p.id}
+                      src={p.originalUrl}
+                      alt=""
+                      className="w-6 h-6 rounded-full object-cover"
+                    />
+                  ))}
+                  <span className="text-xs text-stone-500">
+                    {referencePhotos.map((p) => p.role === 'GROOM' ? '신랑' : '신부').join(', ')} 등록됨
+                  </span>
+                </div>
+              ) : (
+                <span className="text-xs text-stone-400">미등록</span>
+              )
+            }
+          >
+            {refPhotosLoading ? (
+              <div className="flex items-center justify-center py-6 gap-2 text-stone-400">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-sm">참조 사진 확인 중...</span>
+              </div>
+            ) : (
+              <ReferencePhotoSection
+                referencePhotos={referencePhotos}
+                onPhotosChange={setReferencePhotos}
+                compact={hasRefPhotos}
+              />
+            )}
+          </ToolSection>
+        </div>
+
+        {/* 이전 생성 기록 */}
+        <ToolSection
+          title="이전 생성 기록"
+          open={legacySectionOpen}
+          onToggle={() => {
+            const willOpen = !legacySectionOpen;
+            setLegacySectionOpen(willOpen);
+            if (willOpen) loadLegacy();
+          }}
         >
           {legacyLoading ? (
-            <Loader2 className="w-3 h-3 animate-spin" />
-          ) : showLegacy ? (
-            <ChevronUp className="w-3 h-3" />
-          ) : (
-            <ChevronDown className="w-3 h-3" />
-          )}
-          이전 생성 기록
-        </button>
-
-        {showLegacy && legacyGenerations.length > 0 && (
-          <div className="space-y-3 rounded-lg border border-stone-100 bg-stone-50 p-4">
+            <div className="flex items-center justify-center py-4 gap-2 text-stone-400">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-sm">불러오는 중...</span>
+            </div>
+          ) : legacyGenerations.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
               {legacyGenerations.map((gen) => (
                 <div key={gen.id} className="space-y-2">
@@ -786,13 +822,51 @@ export function AlbumDashboard({
                 </div>
               ))}
             </div>
-          </div>
-        )}
-
-        {showLegacy && legacyGenerations.length === 0 && !legacyLoading && (
-          <p className="text-xs text-stone-400 pl-5">이전 생성 기록이 없습니다</p>
-        )}
+          ) : (
+            <p className="text-xs text-stone-400 py-2">이전 생성 기록이 없습니다</p>
+          )}
+        </ToolSection>
       </div>
+
+      {/* ── 7. FloatingBar (생성 중 또는 완료 후 최소화) ── */}
+      {isMinimized && (generation.state.isGenerating || generation.state.completedUrls.length > 0 || generation.state.failedIndices.length > 0) && (
+        <GenerationFloatingBar
+          completedCount={generation.state.completedUrls.length}
+          failedCount={generation.state.failedIndices.length}
+          totalImages={generation.state.totalImages}
+          isComplete={!generation.state.isGenerating && (generation.state.completedUrls.length > 0 || generation.state.failedIndices.length > 0)}
+          onExpand={() => {
+            setIsMinimized(false);
+            setShowAiModal(true);
+          }}
+          onDismiss={() => {
+            setIsMinimized(false);
+            generation.reset();
+          }}
+        />
+      )}
+
+      {/* AI 생성 모달 */}
+      <AIGenerationModal
+        isOpen={showAiModal}
+        onClose={() => setShowAiModal(false)}
+        credits={credits}
+        referencePhotos={referencePhotos}
+        snapType={snapType}
+        generation={generation}
+        isMinimized={isMinimized}
+        onSetMinimized={setIsMinimized}
+        showWizard={showWizard}
+        onSetShowWizard={setShowWizard}
+        selectedModel={selectedModel}
+        onWizardGenerate={handleWizardGenerate}
+        onOpenRefSection={() => {
+          setRefSectionOpen(true);
+          setTimeout(() => {
+            refSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 100);
+        }}
+      />
 
       {/* Confirm Dialog */}
       <ConfirmDialog
@@ -809,7 +883,41 @@ export function AlbumDashboard({
   );
 }
 
-// ── Group Chip ──
+// ── ToolSection (collapsible accordion) ──
+
+function ToolSection({
+  title,
+  summary,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string;
+  summary?: React.ReactNode;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-stone-200 overflow-hidden">
+      <button
+        onClick={onToggle}
+        className="flex w-full items-center justify-between px-4 py-3 hover:bg-stone-50 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-stone-700">{title}</span>
+          {!open && summary}
+        </div>
+        <ChevronDown
+          className={`w-4 h-4 text-stone-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {open && <div className="px-4 pb-4 border-t border-stone-100">{children}</div>}
+    </div>
+  );
+}
+
+// ── GroupChip ──
 
 function GroupChip({
   group,
@@ -829,7 +937,7 @@ function GroupChip({
 
   if (editing) {
     return (
-      <div className="flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1">
+      <div className="flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 shrink-0">
         <input
           type="text"
           value={name}
@@ -848,7 +956,7 @@ function GroupChip({
 
   return (
     <div
-      className={`group/chip flex items-center rounded-full px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer ${
+      className={`group/chip shrink-0 flex items-center rounded-full px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer ${
         isActive ? 'bg-rose-100 text-rose-700' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
       }`}
     >

@@ -7,6 +7,7 @@ import type { JobResult } from '@/hooks/useAIGeneration';
 interface BatchGenerationViewProps {
   totalImages: number;
   completedUrls: string[];
+  failedIndices: number[];
   currentIndex: number;
   statusMessage: string;
   error: string | null;
@@ -20,6 +21,7 @@ interface BatchGenerationViewProps {
 export function BatchGenerationView({
   totalImages,
   completedUrls,
+  failedIndices,
   currentIndex,
   statusMessage,
   error,
@@ -29,13 +31,27 @@ export function BatchGenerationView({
   onCancel,
   onDismiss,
 }: BatchGenerationViewProps) {
-  const completedCount = completedUrls.length;
-  const progress = totalImages > 0 ? (completedCount / totalImages) * 100 : 0;
-  const isComplete = !isGenerating && completedCount > 0;
-  const hasFailures = jobResult && jobResult.failedImages > 0;
+  const successCount = completedUrls.length;
+  const processedCount = successCount + failedIndices.length;
+  const progress = totalImages > 0 ? (processedCount / totalImages) * 100 : 0;
+  const isComplete = !isGenerating && processedCount > 0;
+  const hasFailures = failedIndices.length > 0 || (jobResult && jobResult.failedImages > 0);
+
+  // 슬롯별 URL 매핑 (실패 인덱스를 건너뛰고 성공 URL 순서대로 매핑)
+  const slotUrlMap = new Map<number, string>();
+  let urlIdx = 0;
+  for (let i = 0; i < totalImages; i++) {
+    if (failedIndices.includes(i)) continue;
+    if (urlIdx < completedUrls.length) {
+      slotUrlMap.set(i, completedUrls[urlIdx]);
+      urlIdx++;
+    } else {
+      break;
+    }
+  }
 
   // Estimate remaining time: ~25s per image
-  const remainingImages = totalImages - completedCount;
+  const remainingImages = totalImages - processedCount;
   const estimatedSeconds = remainingImages * 25;
   const minutes = Math.floor(estimatedSeconds / 60);
   const seconds = estimatedSeconds % 60;
@@ -58,7 +74,7 @@ export function BatchGenerationView({
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-stone-600">
-            {completedCount}/{totalImages}장
+            {isComplete ? `${successCount}/${totalImages}장` : `${processedCount}/${totalImages}장`}
           </span>
           {isGenerating && onCancel && (
             <button
@@ -109,16 +125,19 @@ export function BatchGenerationView({
       {/* Image grid */}
       <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2">
         {Array.from({ length: totalImages }).map((_, index) => {
-          const url = completedUrls[index];
-          const isCurrentlyGenerating = index === completedCount && !error;
-          const isWaiting = index > completedCount;
+          const url = slotUrlMap.get(index);
+          const isFailed = failedIndices.includes(index);
+          const isCurrentlyGenerating = isGenerating && index === currentIndex && !isFailed;
+          const isWaiting = !url && !isFailed && !isCurrentlyGenerating;
 
           return (
             <motion.div
               key={index}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="relative aspect-square overflow-hidden rounded-lg border border-stone-200 bg-stone-50"
+              className={`relative aspect-square overflow-hidden rounded-lg border bg-stone-50 ${
+                isFailed ? 'border-red-200' : 'border-stone-200'
+              }`}
             >
               {url ? (
                 // Completed
@@ -133,6 +152,12 @@ export function BatchGenerationView({
                     <Check className="w-2.5 h-2.5 text-white" />
                   </div>
                 </motion.div>
+              ) : isFailed ? (
+                // Failed
+                <div className="h-full w-full flex flex-col items-center justify-center gap-1.5 bg-red-50/50">
+                  <AlertCircle className="w-5 h-5 text-red-400" />
+                  <span className="text-[10px] text-red-400">실패</span>
+                </div>
               ) : isCurrentlyGenerating ? (
                 // Currently generating
                 <div className="h-full w-full flex flex-col items-center justify-center gap-1.5">
@@ -148,7 +173,9 @@ export function BatchGenerationView({
               )}
 
               {/* Index label */}
-              <div className="absolute left-1 top-1 rounded-full bg-black/40 px-1.5 py-0.5 text-[10px] font-medium text-white">
+              <div className={`absolute left-1 top-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium text-white ${
+                isFailed ? 'bg-red-500/70' : 'bg-black/40'
+              }`}>
                 {index + 1}
               </div>
             </motion.div>
