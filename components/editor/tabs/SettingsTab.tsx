@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import { RotateCcw, Lock, GripVertical, ImagePlus, X, RefreshCw } from 'lucide-react';
+import { RotateCcw, Lock, GripVertical, ImagePlus, X, Type, ALargeSmall } from 'lucide-react';
+import { FONT_REGISTRY, TEXT_SCALE_LABELS, type FontId, type TextScale } from '@/lib/fonts/registry';
 import { useToast } from '@/components/ui/Toast';
 import {
   DndContext,
@@ -79,7 +80,7 @@ function SortableItem({ id, index, isActive, note }: SortableItemProps) {
       <button
         {...attributes}
         {...listeners}
-        className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded cursor-grab active:cursor-grabbing transition-colors"
+        className="p-2.5 md:p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded cursor-grab active:cursor-grabbing transition-colors"
         aria-label="드래그하여 이동"
       >
         <GripVertical className="w-4 h-4" />
@@ -98,7 +99,6 @@ function SortableItem({ id, index, isActive, note }: SortableItemProps) {
 export function SettingsTab() {
   const { invitation, updateInvitation } = useInvitationEditor();
   const [ogUploading, setOgUploading] = useState(false);
-  const [ogRefreshing, setOgRefreshing] = useState(false);
   const ogFileRef = useRef<HTMLInputElement>(null);
 
   // 현재 OG 설정
@@ -165,22 +165,6 @@ export function SettingsTab() {
   }, [updateShare]);
 
   const { showToast } = useToast();
-  const isPublished = invitation.status === 'PUBLISHED';
-
-  const handleRefreshOgCache = useCallback(async () => {
-    setOgRefreshing(true);
-    try {
-      const res = await fetch(`/api/invitations/${invitation.id}/refresh-og`, {
-        method: 'POST',
-      });
-      const data = await res.json();
-      showToast(data.message || (data.success ? '갱신 완료' : '갱신 실패'), data.success ? 'success' : 'error');
-    } catch {
-      showToast('캐시 갱신에 실패했습니다', 'error');
-    } finally {
-      setOgRefreshing(false);
-    }
-  }, [invitation.id, showToast]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -248,7 +232,7 @@ export function SettingsTab() {
       </div>
 
       {/* 섹션 순서 */}
-      <div className="bg-white rounded-xl p-6 space-y-4 border border-stone-200">
+      <div className="bg-white rounded-xl p-4 md:p-6 space-y-4 border border-stone-200">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-medium text-stone-700">섹션 순서</h3>
@@ -276,7 +260,7 @@ export function SettingsTab() {
                 고정
               </span>
             </div>
-            <div className="p-1.5 text-stone-300">
+            <div className="p-2.5 md:p-1.5 text-stone-300">
               <Lock className="w-4 h-4" />
             </div>
           </div>
@@ -305,8 +289,94 @@ export function SettingsTab() {
         </div>
       </div>
 
+      {/* 폰트 & 텍스트 크기 */}
+      <div className="bg-white rounded-xl p-4 md:p-6 space-y-5 border border-stone-200">
+        <div className="flex items-center gap-2">
+          <Type className="w-4 h-4 text-stone-500" />
+          <div>
+            <h3 className="text-sm font-medium text-stone-700">폰트 & 텍스트 크기</h3>
+            <p className="text-xs text-stone-500 mt-0.5">청첩장 전체에 적용됩니다</p>
+          </div>
+        </div>
+
+        {/* 폰트 선택 */}
+        <div>
+          <label className="block text-xs font-medium text-stone-600 mb-2">
+            폰트
+          </label>
+          <div className="space-y-1">
+            {FONT_REGISTRY.map((font) => {
+              const isSelected = invitation.settings?.fontFamily === font.id;
+              return (
+                <button
+                  key={font.id}
+                  type="button"
+                  onClick={() => handleSettingsChange('fontFamily', isSelected ? undefined : font.id)}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border transition-all text-left ${
+                    isSelected
+                      ? 'border-pink-300 bg-pink-50/50 ring-1 ring-pink-200'
+                      : 'border-stone-150 hover:border-stone-300 hover:bg-stone-50'
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <span
+                      className="block text-base text-stone-800 truncate"
+                      style={{ fontFamily: `var(${font.cssVariable})` }}
+                    >
+                      사랑으로 하나 되는 날
+                    </span>
+                    <span className="text-[10px] text-stone-400 mt-0.5">
+                      {font.nameKo} · {font.name}
+                    </span>
+                  </div>
+                  {isSelected && (
+                    <div className="flex-shrink-0 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center ml-2">
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          {!invitation.settings?.fontFamily && (
+            <p className="text-[10px] text-stone-400 mt-1.5">
+              선택하지 않으면 템플릿 기본 폰트가 사용됩니다
+            </p>
+          )}
+        </div>
+
+        {/* 텍스트 크기 */}
+        <div>
+          <label className="flex items-center gap-1.5 text-xs font-medium text-stone-600 mb-2">
+            <ALargeSmall className="w-3.5 h-3.5" />
+            텍스트 크기
+          </label>
+          <div className="flex rounded-lg bg-stone-100 p-0.5">
+            {(['sm', 'md', 'lg'] as TextScale[]).map((scale) => {
+              const isActive = (invitation.settings?.textScale ?? 'md') === scale;
+              return (
+                <button
+                  key={scale}
+                  type="button"
+                  onClick={() => handleSettingsChange('textScale', scale)}
+                  className={`flex-1 px-3 py-2 rounded-md text-xs font-medium transition-all ${
+                    isActive
+                      ? 'bg-white text-stone-900 shadow-sm'
+                      : 'text-stone-500 hover:text-stone-700'
+                  }`}
+                >
+                  {TEXT_SCALE_LABELS[scale]}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
       {/* D-Day 달력 스타일 */}
-      <div className="bg-white rounded-xl p-6 space-y-4 border border-stone-200">
+      <div className="bg-white rounded-xl p-4 md:p-6 space-y-4 border border-stone-200">
         <div>
           <h3 className="text-sm font-medium text-stone-700">D-Day 달력</h3>
           <p className="text-xs text-stone-500 mt-1">
@@ -326,7 +396,7 @@ export function SettingsTab() {
       </div>
 
       {/* 비밀번호 보호 */}
-      <div className="bg-white rounded-xl p-6 space-y-4 border border-stone-200">
+      <div className="bg-white rounded-xl p-4 md:p-6 space-y-4 border border-stone-200">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-medium text-stone-700">비밀번호 보호</h3>
@@ -366,7 +436,7 @@ export function SettingsTab() {
       </div>
 
       {/* 자동 삭제 */}
-      <div className="bg-white rounded-xl p-6 space-y-3 border border-stone-200">
+      <div className="bg-white rounded-xl p-4 md:p-6 space-y-3 border border-stone-200">
         <h3 className="text-sm font-medium text-stone-700 mb-3">자동 삭제</h3>
         <p className="text-xs text-stone-600">
           결혼식 후 90일이 지나면 자동으로 삭제됩니다
@@ -379,7 +449,7 @@ export function SettingsTab() {
       </div>
 
       {/* 공유 미리보기 설정 */}
-      <div className="bg-white rounded-xl p-6 space-y-4 border border-stone-200">
+      <div className="bg-white rounded-xl p-4 md:p-6 space-y-4 border border-stone-200">
         <div>
           <h3 className="text-sm font-medium text-stone-700">공유 미리보기</h3>
           <p className="text-xs text-stone-500 mt-1">
@@ -502,31 +572,21 @@ export function SettingsTab() {
           </div>
         </div>
 
-        {/* 카카오톡 캐시 갱신 */}
-        {isPublished && (
-          <div className="pt-3 border-t border-stone-100">
-            <button
-              onClick={handleRefreshOgCache}
-              disabled={ogRefreshing}
-              className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-stone-600 bg-stone-50 hover:bg-stone-100 rounded-lg transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${ogRefreshing ? 'animate-spin' : ''}`} />
-              {ogRefreshing ? '갱신 중...' : '카카오톡 미리보기 갱신'}
-            </button>
-            <p className="text-[10px] text-stone-400 mt-1.5 text-center">
-              수정 후 카카오톡 미리보기가 안 바뀔 때 눌러주세요
-            </p>
-          </div>
-        )}
+        {/* 카카오톡 캐시 안내 */}
+        <div className="pt-3 border-t border-stone-100">
+          <p className="text-[10px] text-stone-400 text-center leading-relaxed">
+            카카오톡 미리보기는 저장 시 자동으로 갱신됩니다
+          </p>
+        </div>
       </div>
 
       {/* 통계 */}
-      <div className="bg-white rounded-xl p-6 space-y-4 border border-stone-200">
+      <div className="bg-white rounded-xl p-4 md:p-6 space-y-4 border border-stone-200">
         <h3 className="text-sm font-medium text-stone-700 mb-3">통계</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="p-4 bg-white rounded-xl border border-stone-200">
             <p className="text-xs text-stone-500 mb-1">조회수</p>
-            <p className="text-2xl font-bold text-stone-900">
+            <p className="text-lg md:text-2xl font-bold text-stone-900">
               {invitation.viewCount || 0}
             </p>
           </div>

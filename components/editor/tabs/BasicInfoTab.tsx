@@ -95,7 +95,7 @@ export function BasicInfoTab() {
       </div>
 
       {/* 신랑 정보 */}
-      <div className="bg-white rounded-xl p-6 space-y-4 border border-stone-200">
+      <div className="bg-white rounded-xl p-4 md:p-6 space-y-4 border border-stone-200">
         <h3 className="text-sm font-medium text-stone-700 mb-3">신랑</h3>
 
         <div>
@@ -217,7 +217,7 @@ export function BasicInfoTab() {
       </div>
 
       {/* 신부 정보 */}
-      <div className="bg-white rounded-xl p-6 space-y-4 border border-stone-200">
+      <div className="bg-white rounded-xl p-4 md:p-6 space-y-4 border border-stone-200">
         <h3 className="text-sm font-medium text-stone-700 mb-3">신부</h3>
 
         <div>

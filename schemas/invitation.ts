@@ -150,9 +150,11 @@ export const SettingsSchema = z.object({
   enableRsvp: z.boolean().default(true),
   rsvpFields: RsvpFieldsSchema.optional(),  // RSVP 필드별 on/off
   backgroundColor: z.string().optional(),
-  fontFamily: z.string().optional(),
+  fontFamily: z.enum(['noto-sans', 'pretendard', 'noto-serif', 'gowun-batang', 'nanum-myeongjo', 'maruburi', 'kopub-batang']).optional(),
+  textScale: z.enum(['sm', 'md', 'lg']).default('md'),
   sectionOrder: z.array(z.string()).optional(), // 섹션 표시 순서
   calendarStyle: z.enum(['none', 'calendar', 'countdown', 'minimal']).default('calendar'),
+  galleryLayout: z.enum(['grid-2', 'grid-3', 'grid-2-1', 'single-column', 'masonry', 'carousel', 'filmstrip', 'highlight']).optional(),
   requirePassword: z.boolean().default(false),
   password: z.string().optional(),
 });
@@ -414,6 +416,7 @@ export const SAMPLE_INVITATION: Invitation = {
     showMap: true,
     enableRsvp: true,
     calendarStyle: 'calendar',
+    textScale: 'md',
     requirePassword: false,
   },
 

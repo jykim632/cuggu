@@ -16,6 +16,7 @@ import { CoverSection } from "./CoverSection";
 import { EndingSection } from "./sections/EndingSection";
 import { FooterSection } from "./FooterSection";
 import { DividerRenderer } from "./renderers/DividerRenderer";
+import { buildFontStyle } from "@/lib/fonts/registry";
 
 interface BaseTemplateProps {
   data: Invitation;
@@ -26,6 +27,9 @@ interface BaseTemplateProps {
 export function BaseTemplate({ data, theme, isPreview }: BaseTemplateProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const sectionOrder = sanitizeSectionOrder(data.settings.sectionOrder as SectionId[] | undefined);
+
+  // 사용자 폰트 & 텍스트 크기 적용
+  const fontStyle = buildFontStyle(data.settings?.fontFamily, data.settings?.textScale);
 
   // 섹션 활성화 상태 (enabledSections 없으면 전부 활성)
   const enabledSections = (data.extendedData?.enabledSections as Record<string, boolean>) ?? {};
@@ -60,7 +64,7 @@ export function BaseTemplate({ data, theme, isPreview }: BaseTemplateProps) {
     .filter(({ node }) => node !== null);
 
   return (
-    <div className={theme.containerBg}>
+    <div className={theme.containerBg} style={fontStyle}>
       <CoverSection data={data} config={theme.cover} />
       <DividerRenderer config={theme.postCoverDivider} />
 

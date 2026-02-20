@@ -13,6 +13,17 @@ import { GALLERY_CONFIG } from '@/lib/ai/constants';
 import { GalleryImageGrid } from './gallery/GalleryImageGrid';
 import { AlbumPickerModal } from './gallery/AlbumPickerModal';
 
+const LAYOUT_OPTIONS = [
+  { value: undefined as string | undefined, label: '기본', desc: '테마 설정' },
+  { value: 'carousel', label: '슬라이드', desc: '자동 재생' },
+  { value: 'filmstrip', label: '필름', desc: '가로 스크롤' },
+  { value: 'highlight', label: '하이라이트', desc: '히어로+그리드' },
+  { value: 'grid-2', label: '2열', desc: '그리드' },
+  { value: 'grid-3', label: '3열', desc: '그리드' },
+  { value: 'masonry', label: '메이슨리', desc: '핀터레스트' },
+  { value: 'single-column', label: '1열', desc: '풀너비' },
+] as const;
+
 export function GalleryTab() {
   const { invitation, updateInvitation, toggleSection, getEnabledSections } = useInvitationEditor();
   const enabledSections = getEnabledSections();
@@ -25,6 +36,17 @@ export function GalleryTab() {
   const images = invitation.gallery?.images || [];
   const limit = GALLERY_CONFIG.FREE_LIMIT; // TODO: 유저 tier에 따라 동적으로
   const remaining = limit - images.length;
+
+  const currentLayout = invitation.settings?.galleryLayout;
+
+  const handleLayoutChange = (value: string | undefined) => {
+    updateInvitation({
+      settings: {
+        ...invitation.settings,
+        galleryLayout: value as typeof currentLayout,
+      },
+    });
+  };
 
   const handleRemoveImage = (index: number) => {
     const updated = images.filter((_: string, i: number) => i !== index);
@@ -176,6 +198,30 @@ export function GalleryTab() {
           />
           <div className="w-11 h-6 bg-stone-200 border border-stone-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-pink-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-500 peer-checked:border-pink-500"></div>
         </label>
+      </div>
+
+      {/* 레이아웃 선택기 */}
+      <div>
+        <label className="block text-sm font-medium text-stone-700 mb-2">레이아웃</label>
+        <div className="grid grid-cols-4 gap-2">
+          {LAYOUT_OPTIONS.map((opt) => {
+            const isActive = currentLayout === opt.value;
+            return (
+              <button
+                key={opt.label}
+                onClick={() => handleLayoutChange(opt.value)}
+                className={`flex flex-col items-center gap-0.5 p-2.5 rounded-xl border text-center transition-all ${
+                  isActive
+                    ? 'border-pink-400 bg-pink-50 text-pink-700'
+                    : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300 hover:bg-stone-50'
+                }`}
+              >
+                <span className="text-xs font-medium">{opt.label}</span>
+                <span className="text-[10px] text-stone-400">{opt.desc}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* 에러 메시지 */}

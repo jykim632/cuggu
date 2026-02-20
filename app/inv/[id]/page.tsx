@@ -8,6 +8,7 @@ import {
   getInvitationMetaCached,
   incrementViewCount,
 } from '@/lib/invitation-cache';
+import { appendOgVersion } from '@/lib/kakao-og';
 import { verifyVerificationToken } from '@/lib/invitation-verification';
 import { InvitationView } from './InvitationView';
 import { PasswordGate } from './PasswordGate';
@@ -43,10 +44,14 @@ export async function generateMetadata({
       ? invitation.introMessage.slice(0, 100)
       : `${invitation.groomName}님과 ${invitation.brideName}님의 결혼식에 초대합니다`);
 
-  const ogImage = share?.ogImage
+  const rawOgImage = share?.ogImage
     || invitation.galleryImages?.[0]
     || invitation.aiPhotoUrl
     || `${process.env.NEXT_PUBLIC_BASE_URL || 'https://cuggu.com'}/og-default.png`;
+
+  // 카카오 OG 캐시 우회: updatedAt 타임스탬프를 쿼리 파라미터로 추가
+  const updatedAt = 'updatedAt' in invitation ? invitation.updatedAt : null;
+  const ogImage = appendOgVersion(rawOgImage, updatedAt);
 
   return {
     title: `${title} | Cuggu`,

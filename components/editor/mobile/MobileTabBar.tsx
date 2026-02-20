@@ -79,7 +79,7 @@ export function MobileTabBar() {
                 if (el) tabRefs.current.set(tab.id, el);
               }}
               onClick={() => setActiveTab(tab.id)}
-              className={`relative flex items-center gap-1 px-3 py-2.5 text-[13px] whitespace-nowrap transition-colors flex-shrink-0 ${
+              className={`relative flex items-center gap-1 px-3 py-3 text-[13px] whitespace-nowrap transition-colors flex-shrink-0 ${
                 isActive
                   ? 'text-stone-900 font-semibold'
                   : 'text-stone-400 font-medium'

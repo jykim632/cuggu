@@ -253,7 +253,7 @@ export function AccountTab() {
           <div className="space-y-6 pt-2">
             {/* 아버지 계좌 */}
             <div>
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between gap-2 mb-3">
                 <span className="text-sm font-medium text-stone-600">
                   아버지 ({invitation.groom?.fatherName || '이름 미입력'})
                 </span>
@@ -295,7 +295,7 @@ export function AccountTab() {
 
             {/* 어머니 계좌 */}
             <div>
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between gap-2 mb-3">
                 <span className="text-sm font-medium text-stone-600">
                   어머니 ({invitation.groom?.motherName || '이름 미입력'})
                 </span>
@@ -367,7 +367,7 @@ export function AccountTab() {
           <div className="space-y-6 pt-2">
             {/* 아버지 계좌 */}
             <div>
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between gap-2 mb-3">
                 <span className="text-sm font-medium text-stone-600">
                   아버지 ({invitation.bride?.fatherName || '이름 미입력'})
                 </span>
@@ -409,7 +409,7 @@ export function AccountTab() {
 
             {/* 어머니 계좌 */}
             <div>
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between gap-2 mb-3">
                 <span className="text-sm font-medium text-stone-600">
                   어머니 ({invitation.bride?.motherName || '이름 미입력'})
                 </span>

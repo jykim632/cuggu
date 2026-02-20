@@ -180,7 +180,10 @@ const UTILITY_CLASSES = [
   'md:my-4', 'md:my-6', 'md:my-8',
   'md:space-y-4', 'md:space-y-6', 'md:space-y-8',
   // aspect
-  'aspect-square', 'aspect-video',
+  'aspect-square', 'aspect-video', 'aspect-[4/3]',
+  // scroll-snap (filmstrip gallery)
+  'snap-x', 'snap-mandatory', 'snap-center', 'scrollbar-hide',
+  'overscroll-x-contain',
   // backdrop
   'backdrop-blur-none', 'backdrop-blur-sm', 'backdrop-blur', 'backdrop-blur-md', 'backdrop-blur-lg', 'backdrop-blur-xl',
   // ring

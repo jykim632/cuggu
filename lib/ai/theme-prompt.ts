@@ -64,7 +64,7 @@ Match animation to mood:
 // ── 레이아웃 옵션 (종류만, 추천 없음) ──
 
 const LAYOUT_OPTIONS = `## LAYOUT OPTIONS
-galleryLayout: "grid-2" | "grid-3" | "grid-2-1" | "single-column" | "masonry"
+galleryLayout: "grid-2" | "grid-3" | "grid-2-1" | "single-column" | "masonry" | "carousel" | "filmstrip" | "highlight"
 parentsLayout: "side-by-side" | "stacked" | "compact" | "cards"
 parentsFullHeight: true (fills viewport) | false (natural height)
 greetingLayout: "centered" | "left-aligned" | "quote-style"

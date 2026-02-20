@@ -49,6 +49,7 @@ const ENUM_CORRECTIONS: Record<string, Record<string, string>> = {
   galleryLayout: {
     grid_2: 'grid-2', grid_3: 'grid-3', grid_2_1: 'grid-2-1',
     'grid 2 1': 'grid-2-1', single_column: 'single-column', 'single column': 'single-column',
+    film_strip: 'filmstrip', 'film strip': 'filmstrip',
   },
   parentsLayout: {
     side_by_side: 'side-by-side', 'side by side': 'side-by-side',
@@ -83,7 +84,7 @@ const ENUM_VALID_VALUES: Record<string, { values: Set<string>; fallback: string 
     fallback: 'ampersand',
   },
   galleryLayout: {
-    values: new Set(['grid-2', 'grid-3', 'grid-2-1', 'single-column', 'masonry']),
+    values: new Set(['grid-2', 'grid-3', 'grid-2-1', 'single-column', 'masonry', 'carousel', 'filmstrip', 'highlight']),
     fallback: 'grid-2',
   },
   parentsLayout: {
@@ -147,7 +148,7 @@ interface LayoutSeed {
 
 function generateLayoutSeed(): LayoutSeed {
   return {
-    galleryLayout: pick(['grid-2', 'grid-3', 'grid-2-1', 'single-column', 'masonry']),
+    galleryLayout: pick(['grid-2', 'grid-3', 'grid-2-1', 'single-column', 'masonry', 'carousel', 'filmstrip', 'highlight']),
     parentsLayout: pick(['side-by-side', 'stacked', 'compact', 'cards']),
     parentsFullHeight: pick([true, false]),
     greetingLayout: pick(['centered', 'left-aligned', 'quote-style']),

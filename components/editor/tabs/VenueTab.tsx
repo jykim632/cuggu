@@ -206,7 +206,7 @@ export function VenueTab() {
 
       {/* Results */}
       <div
-        className="fixed z-50 bg-white rounded-xl shadow-xl border border-stone-200 max-h-72 overflow-y-auto"
+        className="fixed z-50 bg-white rounded-xl shadow-xl border border-stone-200 max-h-72 max-w-[calc(100vw-1.5rem)] overflow-y-auto"
         style={{
           top: `${dropdownPosition.top}px`,
           left: `${dropdownPosition.left}px`,
@@ -253,7 +253,7 @@ export function VenueTab() {
       </div>
 
       {/* 날짜/시간 */}
-      <div className="bg-white rounded-xl p-6 space-y-4 border border-stone-200">
+      <div className="bg-white rounded-xl p-4 md:p-6 space-y-4 border border-stone-200">
         <h3 className="text-sm font-medium text-stone-700 mb-3">예식 일시</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -282,7 +282,7 @@ export function VenueTab() {
       </div>
 
       {/* 예식장 정보 */}
-      <div className="bg-white rounded-xl p-6 space-y-4 border border-stone-200">
+      <div className="bg-white rounded-xl p-4 md:p-6 space-y-4 border border-stone-200">
         <h3 className="text-sm font-medium text-stone-700 mb-3">예식장</h3>
 
         <div>
@@ -372,7 +372,7 @@ export function VenueTab() {
               <div className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-pink-500 mt-0.5 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-stone-800">
+                  <p className="text-sm text-stone-800 truncate">
                     {invitation.wedding!.venue!.address}
                   </p>
                 </div>

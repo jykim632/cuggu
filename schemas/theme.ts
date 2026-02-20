@@ -144,7 +144,7 @@ export const SerializableThemeSchema = z.object({
   transportTextClass: z.string(),
 
   // ── 레이아웃 다양성 ──
-  galleryLayout: z.enum(['grid-2', 'grid-3', 'grid-2-1', 'single-column', 'masonry']).optional(),
+  galleryLayout: z.enum(['grid-2', 'grid-3', 'grid-2-1', 'single-column', 'masonry', 'carousel', 'filmstrip', 'highlight']).optional(),
   parentsLayout: z.enum(['side-by-side', 'stacked', 'compact', 'cards']).optional(),
   parentsFullHeight: z.boolean().optional(),
   greetingLayout: z.enum(['centered', 'left-aligned', 'quote-style']).optional(),

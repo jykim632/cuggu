@@ -54,6 +54,9 @@ export default {
   			serif: ['var(--font-serif)', 'Georgia', 'serif'],
   			batang: ['var(--font-batang)', 'var(--font-serif)', 'serif'],
   			myeongjo: ['var(--font-myeongjo)', 'var(--font-serif)', 'serif'],
+  			pretendard: ['var(--font-pretendard)', 'system-ui', 'sans-serif'],
+  			maruburi: ['var(--font-maruburi)', 'serif'],
+  			kopub: ['var(--font-kopub)', 'serif'],
   		},
   		colors: {
   			background: 'hsl(var(--background))',
