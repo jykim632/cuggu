@@ -148,10 +148,10 @@ export function ShareModal({ isOpen, onClose, invitation, isJustPublished = fals
                   <div className="mb-5">
                     <p className="text-3xl mb-2">🎉</p>
                     <h3 className="text-lg font-semibold text-stone-900">
-                      청첩장이 발행되었습니다!
+                      청첩장이 완성되었어요!
                     </h3>
                     <p className="text-sm text-stone-500 mt-1">
-                      이제 소중한 분들에게 공유해보세요
+                      소중한 분들을 결혼식에 초대해보세요
                     </p>
                   </div>
                 )}

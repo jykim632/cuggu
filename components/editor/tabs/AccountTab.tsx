@@ -61,7 +61,7 @@ function AccountForm({
           type="text"
           value={account?.accountNumber || ''}
           onChange={(e) => onChange('accountNumber', e.target.value)}
-          placeholder="1234-5678-9012"
+          placeholder="계좌번호"
           className="w-full px-4 py-3 text-sm bg-white border border-stone-200 rounded-lg focus:ring-1 focus:ring-pink-300 focus:border-pink-300 transition-colors placeholder:text-stone-400"
         />
       </div>
@@ -74,7 +74,7 @@ function AccountForm({
           type="text"
           value={account?.accountHolder || ''}
           onChange={(e) => onChange('accountHolder', e.target.value)}
-          placeholder={placeholder || '홍길동'}
+          placeholder={placeholder || '예금주 성함'}
           className="w-full px-4 py-3 text-sm bg-white border border-stone-200 rounded-lg focus:ring-1 focus:ring-pink-300 focus:border-pink-300 transition-colors placeholder:text-stone-400"
         />
       </div>

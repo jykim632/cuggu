@@ -30,7 +30,7 @@ export function MobileTopBar() {
 
   const handlePublish = async () => {
     if (!validation.isReady) {
-      showToast(`필수 정보를 입력해주세요: ${validation.missing.join(', ')}`, 'error');
+      showToast(`조금만 더 채워주세요 — ${validation.missing.join(', ')}`, 'error');
       return;
     }
 
@@ -49,9 +49,9 @@ export function MobileTopBar() {
       const url = `${window.location.origin}/inv/${invitation.id}`;
       await navigator.clipboard.writeText(url);
 
-      showToast('청첩장이 발행되었습니다! 링크가 복사되었습니다.');
+      showToast('청첩장이 완성되었어요! 링크를 복사했습니다');
     } catch {
-      showToast('발행에 실패했습니다. 다시 시도해주세요.', 'error');
+      showToast('발행에 실패했습니다. 잠시 후 다시 시도해주세요.', 'error');
     } finally {
       setIsPublishing(false);
     }

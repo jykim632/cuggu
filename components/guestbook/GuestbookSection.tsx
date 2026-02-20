@@ -90,7 +90,7 @@ export function GuestbookSection({ invitationId, theme }: GuestbookSectionProps)
       const result = await res.json();
 
       if (!res.ok) {
-        setSubmitError(result.error || "방명록 작성에 실패했습니다");
+        setSubmitError(result.error || "메시지 전달에 실패했습니다. 다시 시도해주세요");
         return;
       }
 
@@ -187,7 +187,7 @@ export function GuestbookSection({ invitationId, theme }: GuestbookSectionProps)
         </div>
 
         {submitSuccess && (
-          <p className="text-xs text-green-600 text-center">방명록이 등록되었습니다!</p>
+          <p className="text-xs text-green-600 text-center">축하 메시지가 전달되었습니다</p>
         )}
         {submitError && (
           <p className="text-xs text-red-500 text-center">{submitError}</p>
@@ -201,7 +201,7 @@ export function GuestbookSection({ invitationId, theme }: GuestbookSectionProps)
         </div>
       ) : entries.length === 0 ? (
         <p className="text-center text-sm text-stone-400 py-6">
-          아직 방명록이 없습니다. 첫 번째 메시지를 남겨주세요!
+          아직 남겨진 메시지가 없어요. 첫 번째 축하 인사를 전해주세요
         </p>
       ) : (
         <div className="space-y-3">

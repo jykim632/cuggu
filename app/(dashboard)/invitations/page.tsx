@@ -145,10 +145,10 @@ export default function InvitationsPage() {
         <div className="border border-stone-200 bg-white rounded-lg p-12 text-center">
           <FileHeart className="w-10 h-10 text-stone-300 mx-auto mb-4" />
           <h3 className="text-base font-medium text-stone-900 mb-2">
-            첫 청첩장을 만들어보세요
+            특별한 날을 전해보세요
           </h3>
           <p className="text-sm text-stone-500 mb-6">
-            템플릿을 선택하고 내용을 입력하면 바로 공유할 수 있습니다
+            소중한 분들께 결혼 소식을 전하는 나만의 청첩장을 만들어보세요
           </p>
           <button
             onClick={handleCreateInvitation}

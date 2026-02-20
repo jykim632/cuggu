@@ -98,10 +98,10 @@ export function RSVPForm({ invitationId, fields, theme, onSuccess, className = "
           <Check className="w-6 h-6 text-green-600" />
         </div>
         <h3 className="text-lg font-medium text-stone-900 mb-2">
-          참석 여부가 전달되었습니다
+          전달되었습니다
         </h3>
         <p className="text-sm text-stone-500">
-          소중한 시간 내주셔서 감사합니다
+          참석 여부를 알려주셔서 감사합니다. 좋은 날 뵙겠습니다
         </p>
       </div>
     );

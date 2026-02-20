@@ -38,7 +38,7 @@ export function TopBar({ invitation, isSaving, lastSaved, saveError, onRetrySave
   // 발행하기
   const handlePublish = async () => {
     if (!validation.isReady) {
-      showToast(`필수 정보를 입력해주세요: ${validation.missing.join(', ')}`, 'error');
+      showToast(`조금만 더 채워주세요 — ${validation.missing.join(', ')}`, 'error');
       return;
     }
 
@@ -59,7 +59,7 @@ export function TopBar({ invitation, isSaving, lastSaved, saveError, onRetrySave
       setIsJustPublished(true);
       setShowShareModal(true);
     } catch {
-      showToast('발행에 실패했습니다. 다시 시도해주세요.', 'error');
+      showToast('발행에 실패했습니다. 잠시 후 다시 시도해주세요.', 'error');
     } finally {
       setIsPublishing(false);
     }

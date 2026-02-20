@@ -122,12 +122,12 @@ export default async function InvitationPublicPage({
 function StatusPage({ type }: { type: 'draft' | 'expired' }) {
   const config = {
     draft: {
-      title: '아직 준비 중인 청첩장입니다',
-      description: '청첩장이 발행되면 이 링크에서 확인하실 수 있습니다.',
+      title: '아직 준비 중이에요',
+      description: '곧 특별한 소식을 전해드릴게요. 조금만 기다려주세요.',
     },
     expired: {
-      title: '만료된 청첩장입니다',
-      description: '이 청첩장은 더 이상 열람할 수 없습니다.',
+      title: '소중한 날의 기억',
+      description: '열람 기간이 지났지만, 두 사람의 아름다운 시작은 계속됩니다.',
     },
   }[type];
 

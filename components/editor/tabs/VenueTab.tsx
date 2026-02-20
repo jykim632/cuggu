@@ -294,7 +294,7 @@ export function VenueTab() {
             value={invitation.wedding?.venue?.name || ''}
             onChange={(e) => handleVenueChange('name', e.target.value)}
             onBlur={() => markTouched('venueName')}
-            placeholder="서울웨딩홀"
+            placeholder="예식장 이름"
             className={hasError('venueName', invitation.wedding?.venue?.name) ? INPUT_ERROR_CLASS : INPUT_CLASS}
           />
           {hasError('venueName', invitation.wedding?.venue?.name) && (
@@ -310,7 +310,7 @@ export function VenueTab() {
             type="text"
             value={invitation.wedding?.venue?.hall || ''}
             onChange={(e) => handleVenueChange('hall', e.target.value)}
-            placeholder="3층 그랜드홀"
+            placeholder="홀 이름 (예: 3층 로즈홀)"
             className="w-full px-4 py-3 text-sm bg-white border border-stone-200 rounded-lg focus:ring-1 focus:ring-pink-300 focus:border-pink-300 transition-colors placeholder:text-stone-400"
           />
         </div>

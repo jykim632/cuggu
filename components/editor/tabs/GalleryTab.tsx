@@ -202,10 +202,10 @@ export function GalleryTab() {
           </div>
           <div>
             <p className="text-sm font-medium text-stone-700">
-              아직 사진이 없어요
+              소중한 순간을 담아보세요
             </p>
             <p className="text-xs text-stone-500 mt-1">
-              사진을 추가해서 갤러리를 채워보세요
+              사진을 업로드하거나 AI 앨범에서 추가해보세요
             </p>
           </div>
           <div className="flex items-center justify-center gap-3">

@@ -37,7 +37,7 @@ export function PasswordGate({ invitationId }: PasswordGateProps) {
         setError(data.error || '비밀번호가 올바르지 않습니다');
       }
     } catch {
-      setError('오류가 발생했습니다. 다시 시도해주세요.');
+      setError('잠시 오류가 발생했습니다. 다시 시도해주세요.');
     } finally {
       setIsLoading(false);
     }
@@ -55,10 +55,10 @@ export function PasswordGate({ invitationId }: PasswordGateProps) {
 
         <div className="space-y-2">
           <h1 className="text-xl font-semibold text-gray-800">
-            비밀번호가 필요합니다
+            소중한 분들을 위한 초대장이에요
           </h1>
           <p className="text-sm text-gray-500">
-            이 청첩장은 비밀번호로 보호되어 있습니다
+            비밀번호를 입력해주세요
           </p>
         </div>
 
@@ -66,7 +66,7 @@ export function PasswordGate({ invitationId }: PasswordGateProps) {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="비밀번호 입력"
+          placeholder="비밀번호를 입력해주세요"
           className="w-full px-4 py-3 border border-gray-200 rounded-xl text-center text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 transition-colors"
           autoFocus
         />

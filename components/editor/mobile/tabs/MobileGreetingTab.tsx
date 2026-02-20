@@ -1,12 +1,7 @@
 'use client';
 
 import { useInvitationEditor } from '@/stores/invitation-editor';
-
-const EXAMPLE_GREETINGS = [
-  '평생을 함께할 반려자를 만났습니다.\n저희 두 사람이 사랑과 믿음으로\n한 가정을 이루게 되었습니다.\n오셔서 축복해 주시면 감사하겠습니다.',
-  '서로가 마주보며 다져온 사랑을\n이제 함께 한 곳을 바라보며\n걸어갈 수 있는 큰 사랑으로 키우고자 합니다.\n저희 두 사람의 앞날을 축복해 주십시오.',
-  '두 사람이 사랑으로 만나\n진실과 이해로 하나를 이루어\n믿음과 신의로 가정을 이루려 합니다.\n오셔서 두 사람의 앞날을 축복해 주십시오.',
-];
+import { GREETING_EXAMPLE_TEXTS } from '@/lib/copy/greeting-examples';
 
 /**
  * 모바일 인사말 탭
@@ -56,7 +51,7 @@ export function MobileGreetingTab() {
       <div className="bg-white rounded-xl p-4 space-y-3 border border-stone-200">
         <h3 className="text-sm font-medium text-stone-700">예시 인사말</h3>
         <div className="space-y-2">
-          {EXAMPLE_GREETINGS.map((greeting, index) => (
+          {GREETING_EXAMPLE_TEXTS.map((greeting, index) => (
             <button
               key={index}
               onClick={() => handleGreetingChange(greeting)}

@@ -107,7 +107,7 @@ export function BasicInfoTab() {
             value={invitation.groom?.name || ''}
             onChange={(e) => handleGroomChange('name', e.target.value)}
             onBlur={() => markTouched('groomName')}
-            placeholder="홍길동"
+            placeholder="신랑 이름"
             className={hasError('groomName', invitation.groom?.name) ? INPUT_ERROR_CLASS : INPUT_CLASS}
           />
           {hasError('groomName', invitation.groom?.name) && (
@@ -156,7 +156,7 @@ export function BasicInfoTab() {
               type="text"
               value={invitation.groom?.fatherName || ''}
               onChange={(e) => handleGroomChange('fatherName', e.target.value)}
-              placeholder="홍판서"
+              placeholder="아버지 성함"
               className={INPUT_CLASS}
             />
           </div>
@@ -180,7 +180,7 @@ export function BasicInfoTab() {
               type="text"
               value={invitation.groom?.motherName || ''}
               onChange={(e) => handleGroomChange('motherName', e.target.value)}
-              placeholder="김씨"
+              placeholder="어머니 성함"
               className={INPUT_CLASS}
             />
           </div>
@@ -229,7 +229,7 @@ export function BasicInfoTab() {
             value={invitation.bride?.name || ''}
             onChange={(e) => handleBrideChange('name', e.target.value)}
             onBlur={() => markTouched('brideName')}
-            placeholder="김영희"
+            placeholder="신부 이름"
             className={hasError('brideName', invitation.bride?.name) ? INPUT_ERROR_CLASS : INPUT_CLASS}
           />
           {hasError('brideName', invitation.bride?.name) && (
@@ -278,7 +278,7 @@ export function BasicInfoTab() {
               type="text"
               value={invitation.bride?.fatherName || ''}
               onChange={(e) => handleBrideChange('fatherName', e.target.value)}
-              placeholder="김판서"
+              placeholder="아버지 성함"
               className={INPUT_CLASS}
             />
           </div>
@@ -302,7 +302,7 @@ export function BasicInfoTab() {
               type="text"
               value={invitation.bride?.motherName || ''}
               onChange={(e) => handleBrideChange('motherName', e.target.value)}
-              placeholder="이씨"
+              placeholder="어머니 성함"
               className={INPUT_CLASS}
             />
           </div>
