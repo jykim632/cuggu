@@ -131,8 +131,11 @@ export function buildFontStyle(
 
     // 모든 폰트 CSS 변수를 선택된 폰트로 오버라이드
     // → font-serif, font-batang 등 Tailwind 클래스도 선택된 폰트 사용
+    // 단, 선택된 폰트 자신의 변수는 제외 (순환 참조 방지)
     for (const varName of ALL_FONT_VARS) {
-      style[varName] = fontValue;
+      if (varName !== font.cssVariable) {
+        style[varName] = fontValue;
+      }
     }
   }
 
