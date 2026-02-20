@@ -81,6 +81,7 @@ export async function getInvitationMetaCached(id: string) {
           galleryImages: string[] | null;
           aiPhotoUrl: string | null;
           extendedData: Record<string, any> | null;
+          updatedAt: string | null;
         }>(cacheKey);
         if (cached) return cached;
       } catch {
@@ -101,6 +102,7 @@ export async function getInvitationMetaCached(id: string) {
         galleryImages: invitation.galleryImages,
         aiPhotoUrl: invitation.aiPhotoUrl,
         extendedData: invitation.extendedData as Record<string, any> | null,
+        updatedAt: invitation.updatedAt?.toISOString() ?? null,
       };
       try {
         await redis.set(cacheKey, meta, { ex: CACHE_TTL });

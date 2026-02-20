@@ -5,7 +5,7 @@ import { invitations } from '@/db/schema';
 import { UpdateInvitationSchema, ExtendedDataSchema } from '@/schemas/invitation';
 import { dbRecordToInvitation, invitationToDbUpdate } from '@/lib/invitation-utils';
 import { invalidateInvitationCache } from '@/lib/invitation-cache';
-import { refreshKakaoOgCache, getInvitationUrl } from '@/lib/kakao-og';
+import { getInvitationUrl } from '@/lib/kakao-og';
 import { extractS3Key, deleteFromS3 } from '@/lib/ai/s3';
 import { eq } from 'drizzle-orm';
 
@@ -187,10 +187,8 @@ export async function PUT(
     // 공개 페이지 캐시 무효화
     invalidateInvitationCache(id);
 
-    // PUBLISHED 상태면 카카오 OG 캐시 갱신 (fire-and-forget)
-    if (updated.status === 'PUBLISHED') {
-      refreshKakaoOgCache(getInvitationUrl(id)).catch(() => {});
-    }
+    // 카카오 OG 캐시는 이미지 URL에 ?v={updatedAt} 파라미터로 자동 우회됨
+    // (generateMetadata에서 appendOgVersion 적용)
 
     // 갤러리에서 제거된 이미지 S3 정리 (fire-and-forget)
     if (updateData.galleryImages) {
