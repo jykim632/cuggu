@@ -68,7 +68,7 @@ export function MobileTopBar() {
       {/* 좌: 뒤로가기 */}
       <Link
         href="/dashboard"
-        className="p-1.5 -ml-1.5 text-stone-600 active:text-stone-900 transition-colors"
+        className="p-2 -ml-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-stone-600 active:text-stone-900 transition-colors"
         aria-label="대시보드로 돌아가기"
       >
         <ArrowLeft className="w-5 h-5" />
@@ -94,7 +94,7 @@ export function MobileTopBar() {
         {isPublished ? (
           <button
             onClick={handleShare}
-            className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-white bg-pink-500 active:bg-pink-600 rounded-md transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1 min-h-[44px] text-xs font-medium text-white bg-pink-500 active:bg-pink-600 rounded-md transition-colors"
           >
             <Share2 className="w-3.5 h-3.5" />
             공유
@@ -103,7 +103,7 @@ export function MobileTopBar() {
           <button
             onClick={handlePublish}
             disabled={isPublishing}
-            className="relative flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-white bg-pink-500 active:bg-pink-600 disabled:bg-pink-200 rounded-md transition-colors"
+            className="relative flex items-center gap-1 px-2.5 py-1 min-h-[44px] text-xs font-medium text-white bg-pink-500 active:bg-pink-600 disabled:bg-pink-200 rounded-md transition-colors"
           >
             {isPublishing ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />

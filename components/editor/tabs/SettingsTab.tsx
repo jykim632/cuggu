@@ -79,7 +79,7 @@ function SortableItem({ id, index, isActive, note }: SortableItemProps) {
       <button
         {...attributes}
         {...listeners}
-        className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded cursor-grab active:cursor-grabbing transition-colors"
+        className="p-2.5 md:p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded cursor-grab active:cursor-grabbing transition-colors"
         aria-label="드래그하여 이동"
       >
         <GripVertical className="w-4 h-4" />
@@ -248,7 +248,7 @@ export function SettingsTab() {
       </div>
 
       {/* 섹션 순서 */}
-      <div className="bg-white rounded-xl p-6 space-y-4 border border-stone-200">
+      <div className="bg-white rounded-xl p-4 md:p-6 space-y-4 border border-stone-200">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-medium text-stone-700">섹션 순서</h3>
@@ -276,7 +276,7 @@ export function SettingsTab() {
                 고정
               </span>
             </div>
-            <div className="p-1.5 text-stone-300">
+            <div className="p-2.5 md:p-1.5 text-stone-300">
               <Lock className="w-4 h-4" />
             </div>
           </div>
@@ -306,7 +306,7 @@ export function SettingsTab() {
       </div>
 
       {/* D-Day 달력 스타일 */}
-      <div className="bg-white rounded-xl p-6 space-y-4 border border-stone-200">
+      <div className="bg-white rounded-xl p-4 md:p-6 space-y-4 border border-stone-200">
         <div>
           <h3 className="text-sm font-medium text-stone-700">D-Day 달력</h3>
           <p className="text-xs text-stone-500 mt-1">
@@ -326,7 +326,7 @@ export function SettingsTab() {
       </div>
 
       {/* 비밀번호 보호 */}
-      <div className="bg-white rounded-xl p-6 space-y-4 border border-stone-200">
+      <div className="bg-white rounded-xl p-4 md:p-6 space-y-4 border border-stone-200">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-medium text-stone-700">비밀번호 보호</h3>
@@ -366,7 +366,7 @@ export function SettingsTab() {
       </div>
 
       {/* 자동 삭제 */}
-      <div className="bg-white rounded-xl p-6 space-y-3 border border-stone-200">
+      <div className="bg-white rounded-xl p-4 md:p-6 space-y-3 border border-stone-200">
         <h3 className="text-sm font-medium text-stone-700 mb-3">자동 삭제</h3>
         <p className="text-xs text-stone-600">
           결혼식 후 90일이 지나면 자동으로 삭제됩니다
@@ -379,7 +379,7 @@ export function SettingsTab() {
       </div>
 
       {/* 공유 미리보기 설정 */}
-      <div className="bg-white rounded-xl p-6 space-y-4 border border-stone-200">
+      <div className="bg-white rounded-xl p-4 md:p-6 space-y-4 border border-stone-200">
         <div>
           <h3 className="text-sm font-medium text-stone-700">공유 미리보기</h3>
           <p className="text-xs text-stone-500 mt-1">
@@ -521,12 +521,12 @@ export function SettingsTab() {
       </div>
 
       {/* 통계 */}
-      <div className="bg-white rounded-xl p-6 space-y-4 border border-stone-200">
+      <div className="bg-white rounded-xl p-4 md:p-6 space-y-4 border border-stone-200">
         <h3 className="text-sm font-medium text-stone-700 mb-3">통계</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="p-4 bg-white rounded-xl border border-stone-200">
             <p className="text-xs text-stone-500 mb-1">조회수</p>
-            <p className="text-2xl font-bold text-stone-900">
+            <p className="text-lg md:text-2xl font-bold text-stone-900">
               {invitation.viewCount || 0}
             </p>
           </div>

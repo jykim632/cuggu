@@ -349,7 +349,7 @@ export function TemplateTab() {
             type="button"
             onClick={() => setMode('fast')}
             disabled={isGenerating}
-            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all ${
+            className={`flex-1 flex items-center justify-center gap-1 md:gap-1.5 px-2 md:px-3 py-2 rounded-md text-xs font-medium transition-all ${
               mode === 'fast'
                 ? 'bg-violet-100 text-violet-700 shadow-sm'
                 : 'text-stone-500 hover:text-stone-700'
@@ -363,7 +363,7 @@ export function TemplateTab() {
             type="button"
             onClick={() => setMode('quality')}
             disabled={isGenerating}
-            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all ${
+            className={`flex-1 flex items-center justify-center gap-1 md:gap-1.5 px-2 md:px-3 py-2 rounded-md text-xs font-medium transition-all ${
               mode === 'quality'
                 ? 'bg-violet-100 text-violet-700 shadow-sm'
                 : 'text-stone-500 hover:text-stone-700'
@@ -388,7 +388,7 @@ export function TemplateTab() {
           입력된 예식 정보(계절, 장소 유형)를 참고하여 테마를 생성합니다. 개인정보는 전달되지 않습니다.
         </p>
 
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <span className="text-xs text-stone-400">
             {prompt.length}/250자 | 1 크레딧 소모
           </span>
@@ -432,14 +432,14 @@ export function TemplateTab() {
               <Check className="w-3 h-3 text-white" strokeWidth={3} />
             </div>
             <span className="text-xs font-medium text-violet-700">AI 생성 테마 적용 중</span>
-            <span className="text-xs text-violet-500 ml-auto">아래 템플릿을 선택하면 해제됩니다</span>
+            <span className="text-xs text-violet-500 ml-auto hidden md:inline">아래 템플릿을 선택하면 해제됩니다</span>
           </div>
         )}
       </div>
 
       {/* 내 테마 라이브러리 */}
       {invitation.id && (
-        <div className="bg-white rounded-xl p-6 space-y-4 border border-stone-200">
+        <div className="bg-white rounded-xl p-4 md:p-6 space-y-4 border border-stone-200">
           <div className="flex items-center gap-2">
             <BookOpen className="w-4 h-4 text-violet-500" />
             <h3 className="text-sm font-medium text-stone-700">내 테마 라이브러리</h3>
@@ -485,7 +485,7 @@ export function TemplateTab() {
                     {/* 내용 */}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-stone-800 truncate">&ldquo;{theme.prompt}&rdquo;</p>
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                         <span className="text-xs text-stone-400">{formatRelativeTime(theme.createdAt)}</span>
                         {(() => {
                           const model = theme.modelId ? findThemeModelById(theme.modelId) : null;
@@ -540,7 +540,7 @@ export function TemplateTab() {
       )}
 
       {/* 무료 템플릿 */}
-      <div className="bg-white rounded-xl p-6 space-y-4 border border-stone-200">
+      <div className="bg-white rounded-xl p-4 md:p-6 space-y-4 border border-stone-200">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-medium text-stone-700">무료 템플릿</h3>
           <span className="text-xs text-stone-500">{templates.length}개</span>
@@ -596,10 +596,10 @@ export function TemplateTab() {
         </div>
 
         {/* 업그레이드 CTA */}
-        <div className="bg-pink-50/50 rounded-xl p-6 border border-stone-200">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 bg-pink-500 rounded-xl flex items-center justify-center">
-                <Lock className="w-6 h-6 text-white" />
+        <div className="bg-pink-50/50 rounded-xl p-4 md:p-6 border border-stone-200">
+            <div className="flex items-start gap-3 md:gap-4">
+              <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-pink-500 rounded-xl flex items-center justify-center">
+                <Lock className="w-5 h-5 md:w-6 md:h-6 text-white" />
               </div>
 
               <div className="flex-1">

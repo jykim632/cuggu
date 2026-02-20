@@ -87,21 +87,21 @@ export function ShareBar({ invitationId, groomName, brideName, imageUrl, descrip
       <div className="flex gap-2 justify-center px-5 pb-3 pointer-events-auto max-w-sm mx-auto">
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1.5 py-2.5 px-4 rounded-full bg-white/85 backdrop-blur-md border border-stone-200/60 text-stone-600 text-[13px] tracking-wide font-medium shadow-lg shadow-black/[0.06] active:scale-[0.96] transition-all"
+          className="flex items-center gap-1.5 py-3 px-4 rounded-full bg-white/85 backdrop-blur-md border border-stone-200/60 text-stone-600 text-[13px] tracking-wide font-medium shadow-lg shadow-black/[0.06] active:scale-[0.96] transition-all"
         >
           <Link className="w-3.5 h-3.5" />
           링크 복사
         </button>
         <button
           onClick={handleKakao}
-          className="flex items-center gap-1.5 py-2.5 px-4 rounded-full bg-[#FEE500] backdrop-blur-md text-[#191919] text-[13px] tracking-wide font-medium shadow-lg shadow-black/[0.06] active:scale-[0.96] transition-all"
+          className="flex items-center gap-1.5 py-3 px-4 rounded-full bg-[#FEE500] backdrop-blur-md text-[#191919] text-[13px] tracking-wide font-medium shadow-lg shadow-black/[0.06] active:scale-[0.96] transition-all"
         >
           <MessageCircle className="w-3.5 h-3.5" />
           카카오톡
         </button>
         <button
           onClick={handleShare}
-          className="flex items-center gap-2 py-2.5 px-4 rounded-full bg-stone-800/85 backdrop-blur-md text-white/95 text-[13px] tracking-wide font-medium shadow-lg shadow-black/[0.06] active:scale-[0.96] transition-all"
+          className="flex items-center gap-2 py-3 px-4 rounded-full bg-stone-800/85 backdrop-blur-md text-white/95 text-[13px] tracking-wide font-medium shadow-lg shadow-black/[0.06] active:scale-[0.96] transition-all"
         >
           <Share2 className="w-3.5 h-3.5" />
           공유
