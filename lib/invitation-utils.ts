@@ -105,6 +105,11 @@ export function dbRecordToInvitation(row: DbInvitationRow): Invitation {
   const extResult = ExtendedDataSchema.safeParse(row.extendedData ?? {});
   const ext: ExtendedData = extResult.success ? extResult.data : {};
 
+  // Redis 캐시 역직렬화 시 Date → string 변환 방어
+  const toISO = (v: Date | string) => (v instanceof Date ? v.toISOString() : String(v));
+  const toISOOpt = (v: Date | string | null | undefined) =>
+    v == null ? undefined : toISO(v);
+
   return {
     id: row.id,
     userId: row.userId,
@@ -136,7 +141,7 @@ export function dbRecordToInvitation(row: DbInvitationRow): Invitation {
     },
 
     wedding: {
-      date: row.weddingDate.toISOString(),
+      date: toISO(row.weddingDate),
       venue: {
         name: row.venueName,
         address: row.venueAddress || '',
@@ -178,9 +183,9 @@ export function dbRecordToInvitation(row: DbInvitationRow): Invitation {
     isPasswordProtected: row.isPasswordProtected,
     status: row.status,
     viewCount: row.viewCount,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-    expiresAt: row.expiresAt?.toISOString(),
+    createdAt: toISO(row.createdAt),
+    updatedAt: toISO(row.updatedAt),
+    expiresAt: toISOOpt(row.expiresAt),
   };
 }
 
